@@ -1,4 +1,4 @@
-import PCANBasic
+from PCANBasic import *
 
 class DTCRequestHandler:
     def __init__(self) -> None:
@@ -14,8 +14,12 @@ class DTCRequestHandler:
 
         self.SESSION_ACTIVE = False
 
+    def pcan_get(self):
+        return self.pcan
+
     def start_session(self):
         # write logic to initiate a session
+        self.send_frame(0x743, (0x03, 0x19, 0x02, 0x09, 0x00, 0x00, 0x00, 0x00))
         self.SESSION_ACTIVE = True
 
     def end_session(self):
