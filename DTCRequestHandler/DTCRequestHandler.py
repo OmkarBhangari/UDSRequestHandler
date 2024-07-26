@@ -1,4 +1,4 @@
-from PCANBasic import *
+import PCANBasic
 
 class PCAN:
     def __init__(self) -> None:
@@ -62,3 +62,7 @@ class Receive:
 class DTCRequestHandler:
     def __init__(self) -> None:
         pass
+
+pcan = PCAN()
+
+pcan.send_frame(0x743, (0x03, 0x19, 0x02, 0x09, 0x00, 0x00, 0x00, 0x00))
