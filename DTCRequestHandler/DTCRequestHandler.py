@@ -1,3 +1,4 @@
+import time
 import PCANBasic
 
 class PCAN:
@@ -26,13 +27,16 @@ class PCAN:
             print("Error transmitting CAN message:", result)
         else:
             print("CAN message transmitted successfully")
+    
+    def equals(self, msg1, msg2):
+        return msg1 == msg2
 
 class Inactive:
     def __init__(self, pcan) -> None:
         self.pcan = pcan
 
     def start_session(self) -> None:
-        self.pcan.send_frame(0x743, (0x10, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
+        self.pcan.send_frame(0x743, (0x02, 0x10, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00))
         print("Activating session")
 
 class Idle:
@@ -50,7 +54,8 @@ class Receive:
 
     def receive_frame(self) -> None:
         # write logic to get the next frame on the Receive Queue
-        pass
+        result, msg, timestamp = self.pcan.pcan.Read(self.pcan.channel)
+        return tuple(msg.DATA)
 
     def send_control_frame(self) -> None:
         # write logic to send a control frame
@@ -77,8 +82,15 @@ class DTCRequestHandler:
         print(f"Changed state to {new_state}")
 
     def start_session(self):
+        msg = (0, 0, 0, 0, 0, 0, 0, 0)
+        # msg = (16, 11, 89, 2, 9, 225, 79, 135)
         self.inactive.start_session()
-        self.set_state(DTCRequestHandler.IDLE)
+        self.set_state(DTCRequestHandler.RECEIVE)
+        time.sleep(2)
+        result = self.receive.receive_frame()
+        print(result)
+        print(self.pcan.equals(result, msg))
+            
     
     def request_for_DTC(self): # sends the frame and combines the response and returns it
         self.idle.send_DTC_request() # sends the DTC req frame
@@ -98,4 +110,4 @@ class DTCRequestHandler:
 # Example usage
 handler = DTCRequestHandler()
 handler.start_session()  # Activates session and changes state to IDLE
-handler.request_for_DTC()  # Sends DTC request and changes state to RECEIVE
+# handler.request_for_DTC()  # Sends DTC request and changes state to RECEIVE
