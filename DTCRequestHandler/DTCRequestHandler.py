@@ -2,10 +2,10 @@ import PCANBasic
 
 class PCAN:
     def __init__(self) -> None:
-        self.pcan = PCANBasic.PCANBasic() # Initialize the PCANBasic instance
-        self.channel = PCANBasic.PCAN_USBBUS1 # Define the PCAN channel you are using (e.g., PCAN_USBBUS1 for the first USB channel)
-        self.baudrate = PCANBasic.PCAN_BAUD_500K # Define the baud rate (e.g., PCAN_BAUD_500K for 500 kbps)
-        self.pcan_channel = self.pcan.Initialize(self.channel, self.baudrate) # Initialize the PCAN channel
+        self.pcan = PCANBasic.PCANBasic()  # Initialize the PCANBasic instance
+        self.channel = PCANBasic.PCAN_USBBUS1  # Define the PCAN channel you are using (e.g., PCAN_USBBUS1 for the first USB channel)
+        self.baudrate = PCANBasic.PCAN_BAUD_500K  # Define the baud rate (e.g., PCAN_BAUD_500K for 500 kbps)
+        self.pcan_channel = self.pcan.Initialize(self.channel, self.baudrate)  # Initialize the PCAN channel
 
         # replace this with better error handling structure
         if self.pcan_channel != PCANBasic.PCAN_ERROR_OK:
@@ -17,7 +17,7 @@ class PCAN:
         frame = PCANBasic.TPCANMsg()
         frame.ID = arbitration_id
         frame.MSGTYPE = PCANBasic.PCAN_MESSAGE_STANDARD  # Standard frame
-        frame.LEN = len(data) - data.count(0x00)  # Length of the data (no of non-zero bytes)
+        frame.LEN = len(data)  # Length of the data (no of non-zero bytes)
         frame.DATA = data  # Data (padded with zeros)
 
         # Transmit the CAN message
@@ -28,41 +28,74 @@ class PCAN:
             print("CAN message transmitted successfully")
 
 class Inactive:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, pcan) -> None:
+        self.pcan = pcan
 
-    def activate_session() -> None:
-        # write logic to start session
-        pass
+    def start_session(self) -> None:
+        self.pcan.send_frame(0x743, (0x10, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
+        print("Activating session")
 
 class Idle:
-    def __init__(self) -> None:
-        pass
-    
-    def send_DTC_request() -> None:
+    def __init__(self, pcan) -> None:
+        self.pcan = pcan
+
+    def send_DTC_request(self) -> None:
         # write logic to send DTC Req (0x19) and change state to Receive
-        pass
+        print("Sending DTC request")
+        self.pcan.send_frame(0x743, (0x03, 0x19, 0x02, 0x09, 0x00, 0x00, 0x00, 0x00))
 
 class Receive:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, pcan) -> None:
+        self.pcan = pcan
 
-    def recieve_frame() -> None:
+    def receive_frame(self) -> None:
         # write logic to get the next frame on the Receive Queue
         pass
 
-    def send_control_frame() -> None:
+    def send_control_frame(self) -> None:
         # write logic to send a control frame
         pass
 
-    def send_tester_frame() -> None:
+    def send_tester_frame(self) -> None:
         # write logic to send a control frame
         pass
 
 class DTCRequestHandler:
+    INACTIVE: int = 1
+    IDLE: int = 2
+    RECEIVE: int = 3
+
     def __init__(self) -> None:
-        pass
+        self.state = DTCRequestHandler.INACTIVE
+        self.pcan = PCAN()  # Initialize PCAN instance
+        self.inactive = Inactive(self.pcan)
+        self.idle = Idle(self.pcan)
+        self.receive = Receive(self.pcan)
 
-pcan = PCAN()
+    def set_state(self, new_state) -> None:
+        self.state = new_state
+        print(f"Changed state to {new_state}")
 
-pcan.send_frame(0x743, (0x03, 0x19, 0x02, 0x09, 0x00, 0x00, 0x00, 0x00))
+    def start_session(self):
+        self.inactive.start_session()
+        self.set_state(DTCRequestHandler.IDLE)
+    
+    def request_for_DTC(self): # sends the frame and combines the response and returns it
+        self.idle.send_DTC_request() # sends the DTC req frame
+        self.set_state(DTCRequestHandler.RECEIVE)
+
+    def handle_request(self) -> None:
+        # Example of handling request based on the current state
+        if self.state == DTCRequestHandler.INACTIVE:
+            self.start_session()
+        elif self.state == DTCRequestHandler.IDLE:
+            self.idle.send_DTC_request()
+            self.set_state(DTCRequestHandler.RECEIVE)
+        elif self.state == DTCRequestHandler.RECEIVE:
+            self.receive.receive_frame()
+            # Additional handling logic for Receive state
+
+# Example usage
+handler = DTCRequestHandler()
+handler.start_session()  # Activates session and changes state to IDLE
+handler.request_for_DTC()  # Sends DTC request and changes state to RECEIVE
