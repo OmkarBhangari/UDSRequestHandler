@@ -38,7 +38,7 @@ class PCAN:
         return msg1 == msg2
     
     def hex(self, msg):
-        return [hex(m) for m in tuple(msg)]
+        return tuple([hex(m) for m in msg])
     
     def seconds(self, ms):
         return ms / 1000.0
@@ -71,6 +71,7 @@ class ResponseManager:
 
     def send_control_frame(self) -> None:
         # write logic to send a control frame
+        self.pcan.send_frame(0x743, (0x30, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00))
         pass
 
     def send_tester_frame(self) -> None:
@@ -135,6 +136,17 @@ class DTCRequestHandler:
             if not self.pcan.equals(received_frame, RCRPRP) and not self.pcan.equals(received_frame, negative):
                 break
         print("FF", self.pcan.hex(received_frame))
+
+        self.response_manager.send_control_frame()
+        while True:
+            time.sleep(self.pcan.seconds(int("14", 16)))
+            received_frame = self.pcan.receive_frame()
+            # if I didn't receive RCRPRP frame then I must have gotten correct frame. although 
+            # this won't work if there are multiple frames that I can receive
+            print(self.pcan.hex(received_frame))
+
+            if received_frame[0] == int(0x24):
+                break
 
         
 
