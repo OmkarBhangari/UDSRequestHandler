@@ -42,6 +42,12 @@ class Inactive:
         self.pcan.send_frame(0x743, (0x02, 0x10, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00))
         print("Activating session")
 
+    def extract_time(self, msg):
+        p2 = msg[3]
+        p2_star = msg[4:7]
+        p2_star = (p2_star[0] << 16) | (p2_star[1] << 8) | p2_star[2]
+        return p2, p2_star
+
 class Idle:
     def __init__(self, pcan) -> None:
         self.pcan = pcan
@@ -81,13 +87,16 @@ class DTCRequestHandler:
         self.idle = Idle(self.pcan)
         self.receive = Receive(self.pcan)
 
+        self.p2: float = 0.0
+        self.p2_star: float = 0.0
+
     def set_state(self, new_state) -> None:
         self.state = new_state
         print(f"Changed state to {new_state}")
 
     def start_session(self):
         # request correctly recieved positive response pending
-        RCRPRP = (0x7F, 0x78, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+        RCRPRP = (0x7F, 0x10, 0x78, 0x00, 0x00, 0x00, 0x00, 0x00)
         negative = (0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
 
         self.inactive.send_start_session_frame()
@@ -102,8 +111,9 @@ class DTCRequestHandler:
 
             if not self.pcan.equals(received_frame, RCRPRP) and not self.pcan.equals(received_frame, negative):
                 break
-        # print("Positive", received_frame)
             
+        self.p2, self.p2_star = self.inactive.extract_time(received_frame)
+        self.set_state(DTCRequestHandler.IDLE)
     
     def request_for_DTC(self): # sends the frame and combines the response and returns it
         self.idle.send_DTC_request() # sends the DTC req frame
@@ -123,4 +133,4 @@ class DTCRequestHandler:
 # Example usage
 handler = DTCRequestHandler()
 handler.start_session()  # Activates session and changes state to IDLE
-# handler.request_for_DTC()  # Sends DTC request and changes state to RECEIVE
+handler.request_for_DTC()  # Sends DTC request and changes state to RECEIVE
