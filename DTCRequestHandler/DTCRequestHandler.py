@@ -30,12 +30,15 @@ class PCAN:
     
     def equals(self, msg1, msg2):
         return msg1 == msg2
+    
+    def hex(self, msg):
+        return [hex(m) for m in tuple(msg)]
 
 class Inactive:
     def __init__(self, pcan) -> None:
         self.pcan = pcan
 
-    def start_session(self) -> None:
+    def send_start_session_frame(self) -> None:
         self.pcan.send_frame(0x743, (0x02, 0x10, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00))
         print("Activating session")
 
@@ -55,6 +58,7 @@ class Receive:
     def receive_frame(self) -> None:
         # write logic to get the next frame on the Receive Queue
         result, msg, timestamp = self.pcan.pcan.Read(self.pcan.channel)
+        # print(msg)
         return tuple(msg.DATA)
 
     def send_control_frame(self) -> None:
@@ -82,14 +86,23 @@ class DTCRequestHandler:
         print(f"Changed state to {new_state}")
 
     def start_session(self):
-        msg = (0, 0, 0, 0, 0, 0, 0, 0)
-        # msg = (16, 11, 89, 2, 9, 225, 79, 135)
-        self.inactive.start_session()
+        # request correctly recieved positive response pending
+        RCRPRP = (0x7F, 0x78, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+        negative = (0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+
+        self.inactive.send_start_session_frame()
         self.set_state(DTCRequestHandler.RECEIVE)
-        time.sleep(2)
-        result = self.receive.receive_frame()
-        print(result)
-        print(self.pcan.equals(result, msg))
+
+        while True:
+            time.sleep(0.1)
+            received_frame = self.receive.receive_frame()
+            # if I didn't receive RCRPRP frame then I must have gotten correct frame. although 
+            # this won't work if there are multiple frames that I can receive
+            print(self.pcan.hex(received_frame))
+
+            if not self.pcan.equals(received_frame, RCRPRP) and not self.pcan.equals(received_frame, negative):
+                break
+        # print("Positive", received_frame)
             
     
     def request_for_DTC(self): # sends the frame and combines the response and returns it
