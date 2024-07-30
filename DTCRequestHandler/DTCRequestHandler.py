@@ -90,7 +90,7 @@ class ResponseManager:
         pass
 
     def extract_data_length(self, msg) -> None:
-        return msg[1]
+        return msg[1], list(msg[5:])
 
 class DTCRequestHandler:
     INACTIVE: int = 1
@@ -150,19 +150,21 @@ class DTCRequestHandler:
             else:
                 break
         
-        data_length = self.response_manager.extract_data_length(received_frame)
+        data_length, data = self.response_manager.extract_data_length(received_frame)
         for i in range(math.ceil(data_length / (self.block_count * 7))):
             self.response_manager.send_control_frame(self.block_count, self.time_between_consecutive_frame)
 
             while True:
                 time.sleep(self.pcan.seconds(int("14", 16)))
                 received_frame = self.pcan.receive_frame()
-                print(self.pcan.hex(received_frame))
+                print(received_frame)
+                data.extend(received_frame[1:])
                 if received_frame[0] == self.pcan.increment(self.current_pos, self.block_count):
                     break
             
             self.current_pos = self.pcan.increment(self.current_pos, self.block_count)
             print(hex(self.current_pos))
+        print(self.pcan.hex(data))
 
 # Example usage
 handler = DTCRequestHandler()
