@@ -1,5 +1,7 @@
 import time
 import PCANBasic
+import Frame
+
 
 class PCAN:
     def __init__(self) -> None:
@@ -25,8 +27,6 @@ class PCAN:
         result = self.pcan.Write(self.channel, frame)
         if result != PCANBasic.PCAN_ERROR_OK:
             print("Error transmitting CAN message:", result)
-        else:
-            print("CAN message transmitted successfully")
     
     def receive_frame(self) -> None:
         # write logic to get the next frame on the Receive Queue
@@ -109,9 +109,9 @@ class DTCRequestHandler:
             received_frame = self.pcan.receive_frame()
             # if I didn't receive RCRPRP frame then I must have gotten correct frame. although 
             # this won't work if there are multiple frames that I can receive
-            print(self.pcan.hex(received_frame))
+            print("Response to Start Session", self.pcan.hex(received_frame))
 
-            if not self.pcan.equals(received_frame, RCRPRP) and not self.pcan.equals(received_frame, negative):
+            if self.pcan.equals(received_frame, Frame.SESSION_START_REQ_POS_RESPONSE):
                 break
             
         self.p2, self.p2_star = self.inactive.extract_time(received_frame)
@@ -126,17 +126,16 @@ class DTCRequestHandler:
         self.set_state(DTCRequestHandler.RECEIVE)
 
         start_time = time.time()
-        while time.time() - start_time < self.pcan.seconds(self.p2_star):
-            time.sleep(self.pcan.seconds(self.p2))
+        while True: # time.time() - start_time < self.pcan.seconds(self.p2_star)
+            time.sleep(0.1) # self.pcan.seconds(self.p2)
             received_frame = self.pcan.receive_frame()
             # if I didn't receive RCRPRP frame then I must have gotten correct frame. although 
             # this won't work if there are multiple frames that I can receive
-            print(self.pcan.hex(received_frame))
+            print("Response to DTC Req", self.pcan.hex(received_frame))
 
-            if not self.pcan.equals(received_frame, RCRPRP) and not self.pcan.equals(received_frame, negative):
+            if self.pcan.equals(received_frame, Frame.FIRST_FRAME):
                 break
-        print("FF", self.pcan.hex(received_frame))
-
+        print("SENDING FLOW CONTROL")
         self.response_manager.send_control_frame()
         while True:
             time.sleep(self.pcan.seconds(int("14", 16)))
