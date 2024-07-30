@@ -109,21 +109,17 @@ class DTCRequestHandler:
         self.inactive.send_start_session_frame()
         self.set_state(DTCRequestHandler.RECEIVE)
 
+        # Wait till we get positive response
         while True:
             time.sleep(0.1)
             received_frame = self.pcan.receive_frame()
             try:
                 self.frame.validate_session_response(received_frame)
-            except UDSException as e:
-                print(UDSException, e)
-            
-            # if I didn't receive RCRPRP frame then I must have gotten correct frame. although 
-            # this won't work if there are multiple frames that I can receive
-            print("Response to Start Session", self.pcan.hex(received_frame))
-
-            if self.pcan.equals(received_frame, Frame.SESSION_START_REQ_POS_RESPONSE):
+            except UDSException as udse:
+                print(udse)
+            else:
                 break
-            
+        
         self.p2, self.p2_star = self.inactive.extract_time(received_frame)
         self.set_state(DTCRequestHandler.IDLE)
     
@@ -156,19 +152,6 @@ class DTCRequestHandler:
 
             if received_frame[0] == int(0x24):
                 break
-
-        
-
-    def handle_request(self) -> None:
-        # Example of handling request based on the current state
-        if self.state == DTCRequestHandler.INACTIVE:
-            self.start_session()
-        elif self.state == DTCRequestHandler.IDLE:
-            self.idle.send_DTC_request()
-            self.set_state(DTCRequestHandler.RECEIVE)
-        elif self.state == DTCRequestHandler.RECEIVE:
-            self.pcan.receive_frame()
-            # Additional handling logic for Receive state
 
 # Example usage
 handler = DTCRequestHandler()
