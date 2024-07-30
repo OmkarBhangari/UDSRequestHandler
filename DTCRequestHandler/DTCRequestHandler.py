@@ -2,6 +2,7 @@ import time
 import PCANBasic
 import Frame
 from UDSException import UDSException
+import math
 
 
 class PCAN:
@@ -34,6 +35,16 @@ class PCAN:
         result, msg, timestamp = self.pcan.Read(self.channel)
         # print(msg)
         return tuple(msg.DATA)
+
+    def increment(self, current, step):
+        start = 0x20
+        end = 0x2F
+        current += step
+        if current > end:
+            current = start + (current - end - 1)
+        return current
+        
+
     
     def equals(self, msg1, msg2):
         return msg1 == msg2
@@ -71,12 +82,15 @@ class ResponseManager:
         self.pcan = pcan
         self.frame = frame
 
-    def send_control_frame(self) -> None:
-        self.pcan.send_frame(Frame.ARBITRATION_ID, Frame.FLOW_CONTROL)
+    def send_control_frame(self, block_size, time_between_consecutive_frame) -> None:
+        self.pcan.send_frame(Frame.ARBITRATION_ID, self.frame.construct_flow_control(block_size, time_between_consecutive_frame))
 
     def send_tester_frame(self) -> None:
         # write logic to send a control frame
         pass
+
+    def extract_data_length(self, msg) -> None:
+        return msg[1]
 
 class DTCRequestHandler:
     INACTIVE: int = 1
@@ -90,6 +104,10 @@ class DTCRequestHandler:
         self.inactive = Inactive(self.pcan, self.frame)
         self.idle = Idle(self.pcan, self.frame)
         self.response_manager = ResponseManager(self.pcan, self.frame)
+
+        self.block_count = 0x03 # ms
+        self.time_between_consecutive_frame = 0x14 # ms
+        self.current_pos = 0x20
 
         self.p2: float = 0.0 # in miliseconds
         self.p2_star: float = 0.0 # in miliseconds
@@ -113,7 +131,6 @@ class DTCRequestHandler:
                 break
         
         self.p2, self.p2_star = self.inactive.extract_time(received_frame)
-        print(self.p2, self.p2_star)
         self.set_state(DTCRequestHandler.IDLE)
     
     def request_for_DTC(self): # sends the frame and combines the response and returns it
@@ -133,17 +150,19 @@ class DTCRequestHandler:
             else:
                 break
         
-        self.response_manager.send_control_frame()
+        data_length = self.response_manager.extract_data_length(received_frame)
+        for i in range(math.ceil(data_length / (self.block_count * 7))):
+            self.response_manager.send_control_frame(self.block_count, self.time_between_consecutive_frame)
 
-        while True:
-            time.sleep(self.pcan.seconds(int("14", 16)))
-            received_frame = self.pcan.receive_frame()
-            # if I didn't receive RCRPRP frame then I must have gotten correct frame. although 
-            # this won't work if there are multiple frames that I can receive
-            print(self.pcan.hex(received_frame))
-
-            if received_frame[0] == int(0x24):
-                break
+            while True:
+                time.sleep(self.pcan.seconds(int("14", 16)))
+                received_frame = self.pcan.receive_frame()
+                print(self.pcan.hex(received_frame))
+                if received_frame[0] == self.pcan.increment(self.current_pos, self.block_count):
+                    break
+            
+            self.current_pos = self.pcan.increment(self.current_pos, self.block_count)
+            print(hex(self.current_pos))
 
 # Example usage
 handler = DTCRequestHandler()
