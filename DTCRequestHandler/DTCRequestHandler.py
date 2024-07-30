@@ -1,6 +1,7 @@
 import time
 import PCANBasic
 import Frame
+from UDSException import UDSException
 
 
 class PCAN:
@@ -44,8 +45,9 @@ class PCAN:
         return ms / 1000.0
 
 class Inactive:
-    def __init__(self, pcan) -> None:
+    def __init__(self, pcan, frame) -> None:
         self.pcan = pcan
+        self.frame = frame
 
     def send_start_session_frame(self) -> None:
         self.pcan.send_frame(0x743, (0x02, 0x10, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00))
@@ -58,16 +60,18 @@ class Inactive:
         return p2, p2_star
 
 class Idle:
-    def __init__(self, pcan) -> None:
+    def __init__(self, pcan, frame) -> None:
         self.pcan = pcan
+        self.frame = frame
 
     def send_DTC_request(self) -> None:
         # write logic to send DTC Req (0x19) and change state to Receive
         self.pcan.send_frame(0x743, (0x03, 0x19, 0x02, 0x09, 0x00, 0x00, 0x00, 0x00))
 
 class ResponseManager:
-    def __init__(self, pcan) -> None:
+    def __init__(self, pcan, frame) -> None:
         self.pcan = pcan
+        self.frame = frame
 
     def send_control_frame(self) -> None:
         # write logic to send a control frame
@@ -86,9 +90,10 @@ class DTCRequestHandler:
     def __init__(self) -> None:
         self.state = DTCRequestHandler.INACTIVE
         self.pcan = PCAN()  # Initialize PCAN instance
-        self.inactive = Inactive(self.pcan)
-        self.idle = Idle(self.pcan)
-        self.response_manager = ResponseManager(self.pcan)
+        self.frame = Frame.Frame() # Initialize Frame Instance
+        self.inactive = Inactive(self.pcan, self.frame)
+        self.idle = Idle(self.pcan, self.frame)
+        self.response_manager = ResponseManager(self.pcan, self.frame)
 
         self.p2: float = 0.0 # in miliseconds
         self.p2_star: float = 0.0 # in miliseconds
@@ -107,6 +112,11 @@ class DTCRequestHandler:
         while True:
             time.sleep(0.1)
             received_frame = self.pcan.receive_frame()
+            try:
+                self.frame.validate_session_response(received_frame)
+            except UDSException as e:
+                print(UDSException, e)
+            
             # if I didn't receive RCRPRP frame then I must have gotten correct frame. although 
             # this won't work if there are multiple frames that I can receive
             print("Response to Start Session", self.pcan.hex(received_frame))
