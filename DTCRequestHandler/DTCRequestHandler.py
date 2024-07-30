@@ -50,8 +50,7 @@ class Inactive:
         self.frame = frame
 
     def send_start_session_frame(self) -> None:
-        self.pcan.send_frame(0x743, (0x02, 0x10, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00))
-        print("Activating session")
+        self.pcan.send_frame(Frame.ARBITRATION_ID, Frame.SESSION_START_REQ)
 
     def extract_time(self, msg):
         p2 = msg[3]
@@ -65,8 +64,7 @@ class Idle:
         self.frame = frame
 
     def send_DTC_request(self) -> None:
-        # write logic to send DTC Req (0x19) and change state to Receive
-        self.pcan.send_frame(0x743, (0x03, 0x19, 0x02, 0x09, 0x00, 0x00, 0x00, 0x00))
+        self.pcan.send_frame(Frame.ARBITRATION_ID, Frame.DTC_REQUEST)
 
 class ResponseManager:
     def __init__(self, pcan, frame) -> None:
@@ -74,9 +72,7 @@ class ResponseManager:
         self.frame = frame
 
     def send_control_frame(self) -> None:
-        # write logic to send a control frame
-        self.pcan.send_frame(0x743, (0x30, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00))
-        pass
+        self.pcan.send_frame(Frame.ARBITRATION_ID, Frame.FLOW_CONTROL)
 
     def send_tester_frame(self) -> None:
         # write logic to send a control frame
@@ -102,10 +98,6 @@ class DTCRequestHandler:
         self.state = new_state
 
     def start_session(self):
-        # request correctly recieved positive response pending
-        RCRPRP = (0x03, 0x7F, 0x10, 0x78, 0x00, 0x00, 0x00, 0x00)
-        negative = (0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
-
         self.inactive.send_start_session_frame()
         self.set_state(DTCRequestHandler.RECEIVE)
 
@@ -121,28 +113,28 @@ class DTCRequestHandler:
                 break
         
         self.p2, self.p2_star = self.inactive.extract_time(received_frame)
+        print(self.p2, self.p2_star)
         self.set_state(DTCRequestHandler.IDLE)
     
     def request_for_DTC(self): # sends the frame and combines the response and returns it
-        # request correctly recieved positive response pending
-        RCRPRP = (0x03, 0x7F, 0x19, 0x78, 0x00, 0x00, 0x00, 0x00)
-        negative = (0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
-
         self.idle.send_DTC_request() # sends the DTC req frame
         self.set_state(DTCRequestHandler.RECEIVE)
 
-        start_time = time.time()
+        # start_time = time.time()
+
+        # waits till first frame is received
         while True: # time.time() - start_time < self.pcan.seconds(self.p2_star)
             time.sleep(0.1) # self.pcan.seconds(self.p2)
             received_frame = self.pcan.receive_frame()
-            # if I didn't receive RCRPRP frame then I must have gotten correct frame. although 
-            # this won't work if there are multiple frames that I can receive
-            print("Response to DTC Req", self.pcan.hex(received_frame))
-
-            if self.pcan.equals(received_frame, Frame.FIRST_FRAME):
+            try:
+                self.frame.validate_first_frame(received_frame)
+            except UDSException as udse:
+                print(udse)
+            else:
                 break
-        print("SENDING FLOW CONTROL")
+        
         self.response_manager.send_control_frame()
+
         while True:
             time.sleep(self.pcan.seconds(int("14", 16)))
             received_frame = self.pcan.receive_frame()

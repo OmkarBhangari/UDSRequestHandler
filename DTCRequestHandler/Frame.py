@@ -21,7 +21,7 @@ class Frame:
         """Validates the response for the start extended diagnostic session request.
 
         Args:
-            response (TPCANMsg DATA): The response message to validate.
+            response (TPCANMsg.DATA): The response message to validate.
 
         Raises:
             UDSException: If an NRC is found in the response.
@@ -31,9 +31,39 @@ class Frame:
         if response[0] == 0x03 and response[1] == 0x7F:
             nrc = response[3]
             raise UDSException(nrc)
+        
+        # If all bytes of the frame are zero
+        if response[0] == 0x00 and response[1] == 0x00:
+            raise Exception("Empty Frame")
 
         # Check for positive response
         if response[1] == 0x50 and response[2] == 0x03:
+            return True  # Valid positive response
+
+        # If neither, raise an unexpected format exception
+        raise Exception("Unexpected response format")
+    
+    def validate_first_frame(self, response):
+        """Validates the first frame of DTC request response
+
+        Args:
+            response (TPCANMsg.DATA): The response message to validate.
+
+        Raises:
+            UDSException: If an NRC is found in the response.
+            Exception: If the response format is unexpected or not a positive response.
+        """
+        # Check for negative response (NRC)
+        if response[0] == 0x03 and response[1] == 0x7F:
+            nrc = response[3]
+            raise UDSException(nrc)
+        
+        # If all bytes of the frame are zero
+        if response[0] == 0x00 and response[1] == 0x00:
+            raise Exception("Empty Frame")
+
+        # Check for positive response
+        if response[0] == 0x10 and response[2] == 0x59:
             return True  # Valid positive response
 
         # If neither, raise an unexpected format exception
