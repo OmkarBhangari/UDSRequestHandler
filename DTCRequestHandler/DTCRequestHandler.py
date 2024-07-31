@@ -3,15 +3,15 @@ import time
 from . import Frame
 from . import PCANBasic
 from .UDSException import UDSException
-from .PCANConstants import PCAN_CHANNELS
+from .PCANConstants import PCAN_CHANNELS, PCAN_BAUD_RATES
 
 
 class PCAN:
-    def __init__(self, channel) -> None:
+    def __init__(self, channel, baud) -> None:
         self.pcan = PCANBasic.PCANBasic()  # Initialize the PCANBasic instance
         # self.channel = PCANBasic.PCAN_USBBUS1  # Define the PCAN channel you are using (e.g., PCAN_USBBUS1 for the first USB channel)
         self.channel = PCAN_CHANNELS[channel]  # Define the PCAN channel you are using (e.g., PCAN_USBBUS1 for the first USB channel)
-        self.baudrate = PCANBasic.PCAN_BAUD_500K  # Define the baud rate (e.g., PCAN_BAUD_500K for 500 kbps)
+        self.baudrate = PCAN_BAUD_RATES[baud]  # Define the baud rate (e.g., PCAN_BAUD_500K for 500 kbps)
         self.pcan_channel = self.pcan.Initialize(self.channel, self.baudrate)  # Initialize the PCAN channel
 
         # replace this with better error handling structure
@@ -99,9 +99,9 @@ class DTCRequestHandler:
     IDLE: int = 2
     RECEIVE: int = 3
 
-    def __init__(self, channel) -> None:
+    def __init__(self, channel, baud) -> None:
         self.state = DTCRequestHandler.INACTIVE
-        self.pcan = PCAN(channel)  # Initialize PCAN instance
+        self.pcan = PCAN(channel, baud)  # Initialize PCAN instance
         self.frame = Frame.Frame() # Initialize Frame Instance
         self.inactive = Inactive(self.pcan, self.frame)
         self.idle = Idle(self.pcan, self.frame)
