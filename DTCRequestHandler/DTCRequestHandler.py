@@ -86,8 +86,12 @@ class DTCRequestHandler:
         # write logic to send a control frame
         pass
 
-    def extract_data_length(self, msg) -> None:
-        return msg[1], list(msg[5:])
+    def extract_data_length(self,msg):
+        length = ((msg[0] & 0x0F) << 8) | msg[1]
+        data = list(msg[5:])
+        
+        return length, data
+
 
     def start_session(self):
         self.pcan.send_frame(Frame.SESSION_START_REQ)
