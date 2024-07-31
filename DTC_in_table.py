@@ -1,6 +1,7 @@
-from DTCRequestHandler import DTCRequestHandler
-from rich.console import Console
 from rich.table import Table
+from rich.console import Console
+
+from DTCRequestHandler import DTCRequestHandler
 
 # self.pcan = PCANBasic.PCANBasic()  # Initialize the PCANBasic instance
 # self.channel = PCANBasic.PCAN_USBBUS1  # Define the PCAN channel you are using (e.g., PCAN_USBBUS1 for the first USB channel)
@@ -11,29 +12,28 @@ arbitration_id = 0x743
 
 handler = DTCRequestHandler("PCAN_USBBUS1", "PCAN_BAUD_500K", "PCAN_MESSAGE_STANDARD", arbitration_id)
 handler.start_session()  # Activates session and changes state to IDLE
-DTC_codes = handler.request_for_DTC()  # Sends DTC request and changes state to RECEIVE
-print(DTC_codes)
+data = handler.request_for_DTC()  # Sends DTC request and changes state to RECEIVE
+
+# Remove trailing 170 values
+while data and data[-1] == 170:
+    data.pop()
+
+# Initialize table and console
+table = Table(title="Hex Values and Status Mask")
+table.add_column("Hex Values", justify="left")
+table.add_column("Status Mask", justify="left")
 console = Console()
-formatted_output=[]
-result=[]
-table = Table(show_header=True, header_style="bold magenta")
-table.add_column("Hex Values", style="cyan")
-table.add_column("Status Mask", style="yellow")
 
-for i in range(0, len(DTC_codes), 4):
-    # Get the first three values in hex format
-    hex_values = [hex(DTC_codes[j]) for j in range(i, min(i + 3, len(DTC_codes)))]
-    
-    # Join the first three values with a space
-    hex_part = ' '.join(hex_values)
-    
-    # Check if there is a fourth value
-    if i + 3 < len(DTC_codes):
-        status_mask = hex(DTC_codes[i + 3])
-        table.add_row(hex_part, status_mask)
+# Process the data
+for i in range(0, len(data), 4):
+    if i + 3 < len(data):
+        combined_hex_value = (data[i] << 16) | (data[i+1] << 8) | data[i+2]
+        status_mask = data[i+3]
         
-    else:
-        table.add_row(hex_part, "")  # Add empty status mask if no fourth value
+        hex_value_str = hex(combined_hex_value)
+        status_mask_str = hex(status_mask)
+        
+        table.add_row(hex_value_str, status_mask_str)
 
-# Print the table with rich
+# Print the table
 console.print(table)
