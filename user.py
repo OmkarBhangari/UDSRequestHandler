@@ -9,4 +9,5 @@ arbitration_id = 0x743
 
 handler = DTCRequestHandler("PCAN_USBBUS1", "PCAN_BAUD_500K", "PCAN_MESSAGE_STANDARD", arbitration_id)
 handler.start_session()  # Activates session and changes state to IDLE
-handler.request_for_DTC()  # Sends DTC request and changes state to RECEIVE
+DTC_codes = handler.request_for_DTC()  # Sends DTC request and changes state to RECEIVE
+print(DTC_codes)

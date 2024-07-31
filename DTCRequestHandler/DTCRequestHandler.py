@@ -89,7 +89,6 @@ class DTCRequestHandler:
     def extract_data_length(self,msg):
         length = ((msg[0] & 0x0F) << 8) | msg[1]
         data = list(msg[5:])
-        
         return length, data
 
 
@@ -135,11 +134,9 @@ class DTCRequestHandler:
             while True:
                 time.sleep(self.pcan.seconds(int("14", 16)))
                 received_frame = self.pcan.receive_frame()
-                print(received_frame)
                 data.extend(received_frame[1:])
                 if received_frame[0] == self.pcan.increment(self.current_pos, self.block_count):
                     break
             
             self.current_pos = self.pcan.increment(self.current_pos, self.block_count)
-            print(hex(self.current_pos))
-        print(self.pcan.hex(data))
+        return data
