@@ -6,22 +6,23 @@ from .UDSException import UDSException
 from .PCANConstants import PCAN_CHANNELS, PCAN_BAUD_RATES, PCAN_MESSAGE_TYPES
 
 class PCAN:
-    def __init__(self, channel, baud, message_type) -> None:
+    def __init__(self, channel, baud, message_type, arbitration_id) -> None:
         self.pcan = PCANBasic.PCANBasic()  # Initialize the PCANBasic instance
         self.channel = PCAN_CHANNELS[channel]  # Define the PCAN channel you are using (e.g., PCAN_USBBUS1 for the first USB channel)
         self.baudrate = PCAN_BAUD_RATES[baud]  # Define the baud rate (e.g., PCAN_BAUD_500K for 500 kbps)
         self.pcan_channel = self.pcan.Initialize(self.channel, self.baudrate)  # Initialize the PCAN channel
         self.message_type = PCAN_MESSAGE_TYPES[message_type]
+        self.arbitration_id = arbitration_id
 
         # replace this with better error handling structure
         if self.pcan_channel != PCANBasic.PCAN_ERROR_OK:
             print("Error initializing PCAN channel:", self.pcan_channel)
             exit(1)
 
-    def send_frame(self, arbitration_id, data):
+    def send_frame(self, data):
         # Define the CAN message with the specified arbitration ID and data
         frame = PCANBasic.TPCANMsg()
-        frame.ID = arbitration_id
+        frame.ID = self.arbitration_id
         frame.MSGTYPE = self.message_type  # Standard frame
         frame.LEN = len(data)  # Length of the data (no of non-zero bytes)
         frame.DATA = data  # Data (padded with zeros)
@@ -59,9 +60,9 @@ class DTCRequestHandler:
     IDLE: int = 2
     RECEIVE: int = 3
 
-    def __init__(self, channel, baud, message_type) -> None:
+    def __init__(self, channel, baud, message_type, arbitration_id) -> None:
         self.state = DTCRequestHandler.INACTIVE
-        self.pcan = PCAN(channel, baud, message_type)  # Initialize PCAN instance
+        self.pcan = PCAN(channel, baud, message_type, arbitration_id)  # Initialize PCAN instance
         self.frame = Frame.Frame() # Initialize Frame Instance
 
         self.block_count = 0x03 # ms
@@ -81,7 +82,7 @@ class DTCRequestHandler:
         return p2, p2_star
     
     def send_control_frame(self, block_size, time_between_consecutive_frame) -> None:
-        self.pcan.send_frame(Frame.ARBITRATION_ID, self.frame.construct_flow_control(block_size, time_between_consecutive_frame))
+        self.pcan.send_frame(self.frame.construct_flow_control(block_size, time_between_consecutive_frame))
 
     def send_tester_frame(self) -> None:
         # write logic to send a control frame
@@ -91,7 +92,7 @@ class DTCRequestHandler:
         return msg[1], list(msg[5:])
 
     def start_session(self):
-        self.pcan.send_frame(Frame.ARBITRATION_ID, Frame.SESSION_START_REQ)
+        self.pcan.send_frame(Frame.SESSION_START_REQ)
         self.set_state(DTCRequestHandler.RECEIVE)
 
         # Wait till we get positive response
@@ -109,7 +110,7 @@ class DTCRequestHandler:
         self.set_state(DTCRequestHandler.IDLE)
     
     def request_for_DTC(self): # sends the frame and combines the response and returns it
-        self.pcan.send_frame(Frame.ARBITRATION_ID, Frame.DTC_REQUEST) # sends the DTC req frame
+        self.pcan.send_frame(Frame.DTC_REQUEST) # sends the DTC req frame
         self.set_state(DTCRequestHandler.RECEIVE)
 
         # start_time = time.time()
