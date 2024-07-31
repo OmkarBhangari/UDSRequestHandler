@@ -87,7 +87,7 @@ class DTCRequestHandler:
         pass
 
     def extract_data_length(self,msg):
-        length = ((msg[0] & 0x0F) << 8) | msg[1]
+        length = (((msg[0] & 0x0F) << 8) | msg[1]) - 3 # to account for 3 bytes in FF
         data = list(msg[5:])
         return length, data
 
@@ -128,8 +128,10 @@ class DTCRequestHandler:
                 break
         
         data_length, data = self.extract_data_length(received_frame)
-        for i in range(math.ceil(data_length / (self.block_count * 7))):
-            self.send_control_frame(self.block_count, self.time_between_consecutive_frame)
+        total_frames = math.ceil(data_length / 7)
+
+        for i in range(total_frames, 0, -self.block_count):
+            self.send_control_frame(i if i < self.block_count else self.block_count, self.time_between_consecutive_frame)
 
             while True:
                 time.sleep(self.pcan.seconds(int("14", 16)))
