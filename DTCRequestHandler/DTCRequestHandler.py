@@ -1,8 +1,8 @@
-import time
-import PCANBasic
-import Frame
-from UDSException import UDSException
 import math
+import time
+from . import Frame
+from . import PCANBasic
+from .UDSException import UDSException
 
 
 class PCAN:
@@ -166,7 +166,3 @@ class DTCRequestHandler:
             print(hex(self.current_pos))
         print(self.pcan.hex(data))
 
-# Example usage
-handler = DTCRequestHandler()
-handler.start_session()  # Activates session and changes state to IDLE
-handler.request_for_DTC()  # Sends DTC request and changes state to RECEIVE

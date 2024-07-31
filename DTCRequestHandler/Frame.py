@@ -1,4 +1,4 @@
-from UDSException import UDSException
+from .UDSException import UDSException
 
 ARBITRATION_ID                      = 0x763
 SESSION_START_REQ                   = (0x02, 0x10, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00)
