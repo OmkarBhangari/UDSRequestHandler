@@ -33,9 +33,7 @@ class PCAN:
             print("Error transmitting CAN message:", result)
     
     def receive_frame(self) -> None:
-        # write logic to get the next frame on the Receive Queue
         result, msg, timestamp = self.pcan.Read(self.channel)
-        # print(msg)
         return tuple(msg.DATA)
 
     def increment(self, current, step):
