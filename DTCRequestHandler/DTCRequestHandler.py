@@ -129,7 +129,7 @@ class DTCRequestHandler:
         
         if frame_type == Frame.SINGLE_FRAME:
             # write logic to extract data from single frame and return it
-            data = [0x12, 0x32]
+            data = list(received_frame[4:])
 
         elif frame_type == Frame.FIRST_FRAME:
             data_length, data = self.extract_data_length(received_frame)

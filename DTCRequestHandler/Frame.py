@@ -62,13 +62,15 @@ class Frame:
             Check for positive response
 
             if SF():
-                return 0
+                return 0  
             if FF():
                 return 1
         '''
-
-        if response[0] == 0x10 and response[2] == 0x59:
-            return True  # Valid positive response
+        if (response[0] & 0xF0) == 0x00 :
+            return  Frame.SINGLE_FRAME
+        
+        if (response[0]& 0xF0) == 0x10:
+            return Frame.FIRST_FRAME  # Valid positive response
 
         # If neither, raise an unexpected format exception
         raise Exception("Unexpected response format")
