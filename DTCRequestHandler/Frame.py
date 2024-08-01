@@ -1,19 +1,13 @@
 from .UDSException import UDSException
 
-ARBITRATION_ID                      = 0x763
-SESSION_START_REQ                   = (0x02, 0x10, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00)
-SESSION_START_REQ_NEG_RESPONSE      = (0x03, 0x7F, 0x10, 0x78, 0x00, 0x00, 0x00, 0x00)
-SESSION_START_REQ_POS_RESPONSE      = (0x06, 0x50, 0x03, 0x32, 0x00, 0x13, 0x88, 0x00)
-DTC_REQUEST                         = (0x03, 0x19, 0x02, 0x09, 0x00, 0x00, 0x00, 0x00)
-DTC_REQUEST_NEG_RESPONSE            = (0x03, 0x7F, 0x19, 0x78, 0x00, 0x00, 0x00, 0x00)
-FIRST_FRAME                         = (0x10, 0x29, 0x59, 0x02, 0x09, 0xE1, 0x4F, 0x87)
-FLOW_CONTROL                        = (0x30, 0x02, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00)
-CF_1                                = (0x21, 0x09, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00)
-CF_2                                = (0x22, 0x09, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00)
-CF_3                                = (0x23, 0x09, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00)
-CF_4                                = (0x24, 0x09, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00)
-
 class Frame:
+    SINGLE_FRAME: int = 0
+    FIRST_FRAME: int = 1
+
+    ARBITRATION_ID                      = 0x763
+    SESSION_START_REQ                   = (0x02, 0x10, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00)
+    DTC_REQUEST                         = (0x03, 0x19, 0x02, 0x09, 0x00, 0x00, 0x00, 0x00)
+
     def __init__(self):
         pass
 
@@ -43,7 +37,7 @@ class Frame:
         # If neither, raise an unexpected format exception
         raise Exception("Unexpected response format")
     
-    def validate_first_frame(self, response):
+    def validate_frame(self, response):
         """Validates the first frame of DTC request response
 
         Args:
@@ -62,7 +56,17 @@ class Frame:
         if response[0] == 0x00 and response[1] == 0x00:
             raise Exception("Empty Frame")
 
-        # Check for positive response
+        '''
+            write logic to check if it is first frame of consecutive frame.
+            if it is SF return 0 else if it is FF return 1
+            Check for positive response
+
+            if SF():
+                return 0
+            if FF():
+                return 1
+        '''
+
         if response[0] == 0x10 and response[2] == 0x59:
             return True  # Valid positive response
 

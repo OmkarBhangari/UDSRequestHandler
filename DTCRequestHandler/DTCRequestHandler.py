@@ -1,6 +1,6 @@
 import math
 import time
-from . import Frame
+from .Frame import Frame
 from . import PCANBasic
 from .UDSException import UDSException
 from .PCANConstants import PCAN_CHANNELS, PCAN_BAUD_RATES, PCAN_MESSAGE_TYPES
@@ -61,7 +61,7 @@ class DTCRequestHandler:
     def __init__(self, channel, baud, message_type, arbitration_id) -> None:
         self.state = DTCRequestHandler.INACTIVE
         self.pcan = PCAN(channel, baud, message_type, arbitration_id)  # Initialize PCAN instance
-        self.frame = Frame.Frame() # Initialize Frame Instance
+        self.frame = Frame() # Initialize Frame Instance
 
         self.block_count = 0x03 # ms
         self.time_between_consecutive_frame = 0x14 # ms
@@ -121,24 +121,29 @@ class DTCRequestHandler:
             time.sleep(0.1) # self.pcan.seconds(self.p2)
             received_frame = self.pcan.receive_frame()
             try:
-                self.frame.validate_first_frame(received_frame)
+                frame_type = self.frame.validate_frame(received_frame)
             except UDSException as udse:
                 print(udse)
             else:
                 break
         
-        data_length, data = self.extract_data_length(received_frame)
-        total_frames = math.ceil(data_length / 7)
+        if frame_type == Frame.SINGLE_FRAME:
+            # write logic to extract data from single frame and return it
+            data = [0x12, 0x32]
 
-        for i in range(total_frames, 0, -self.block_count):
-            self.send_control_frame(i if i < self.block_count else self.block_count, self.time_between_consecutive_frame)
+        elif frame_type == Frame.FIRST_FRAME:
+            data_length, data = self.extract_data_length(received_frame)
+            total_frames = math.ceil(data_length / 7)
 
-            while True:
-                time.sleep(self.pcan.seconds(int("14", 16)))
-                received_frame = self.pcan.receive_frame()
-                data.extend(received_frame[1:])
-                if received_frame[0] == self.pcan.increment(self.current_pos, self.block_count):
-                    break
-            
-            self.current_pos = self.pcan.increment(self.current_pos, self.block_count)
+            for i in range(total_frames, 0, -self.block_count):
+                self.send_control_frame(i if i < self.block_count else self.block_count, self.time_between_consecutive_frame)
+
+                while True:
+                    time.sleep(self.pcan.seconds(int("14", 16)))
+                    received_frame = self.pcan.receive_frame()
+                    data.extend(received_frame[1:])
+                    if received_frame[0] == self.pcan.increment(self.current_pos, self.block_count):
+                        break
+                
+                self.current_pos = self.pcan.increment(self.current_pos, self.block_count)
         return data
