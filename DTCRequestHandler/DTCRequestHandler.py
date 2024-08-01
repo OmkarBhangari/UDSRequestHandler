@@ -36,23 +36,6 @@ class PCAN:
         result, msg, timestamp = self.pcan.Read(self.channel)
         return tuple(msg.DATA)
 
-    def increment(self, current, step):
-        start = 0x20
-        end = 0x2F
-        current += step
-        if current > end:
-            current = start + (current - end - 1)
-        return current
-
-    def equals(self, msg1, msg2):
-        return msg1 == msg2
-    
-    def hex(self, msg):
-        return tuple([hex(m) for m in msg])
-    
-    def seconds(self, ms):
-        return ms / 1000.0
-
 class Utils:
     def __init__(self):
         pass
@@ -61,8 +44,22 @@ class Utils:
         length = (((frame[0] & 0x0F) << 8) | frame[1]) - 3 # to account for 3 bytes in FF
         data = list(frame[5:])
         return length, data
-
-
+    
+    def seconds(self, ms):
+        return ms / 1000.0
+    
+    
+    def hex(self, msg):
+        return tuple([hex(m) for m in msg])
+    def equals(self, msg1, msg2):
+        return msg1 == msg2
+    def increment(self, current, step):
+        start = 0x20
+        end = 0x2F
+        current += step
+        if current > end:
+            current = start + (current - end - 1)
+        return current
 class TP:
     def __init__(self, channel, baud, message_type, arbitration_id, frame):
         self.pcan = PCAN(channel, baud, message_type, arbitration_id)
@@ -140,11 +137,11 @@ class TP:
                 # send the control frame
                 self.send_control_frame(block_count, self.time_between_consecutive_frames)
 
-                next_pos = self.pcan.increment(self.current_pos, self.block_count)
+                next_pos = self.utils.increment(self.current_pos, self.block_count)
 
                 # collect the consecutive frames
                 while True:
-                    time.sleep(self.pcan.seconds(int("14", 16)))
+                    time.sleep(self.utils.seconds(int("14", 16)))
                     received_frame = self.pcan.receive_frame()
 
                     # first byte is sequence number, so extract remaining 7 bytes
