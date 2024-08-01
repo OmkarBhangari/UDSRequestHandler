@@ -1,3 +1,3 @@
-from .DTCRequestHandler import DTCRequestHandler
+from .DTCRequestHandler import UDS
 
-__all__ = ['DTCRequestHandler']
+__all__ = ['UDS']
