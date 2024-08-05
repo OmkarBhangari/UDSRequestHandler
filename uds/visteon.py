@@ -1,18 +1,8 @@
-from pcan import PCAN
 import time
 import queue
 import threading
-
-class Ox10:
-    pass
-class Ox3E:
-    pass
-class Ox22:
-    pass
-class Ox2E:
-    pass
-class Ox19:
-    pass
+import tkinter as tk
+from pcan import PCAN  # Ensure the pcan module is correctly installed
 
 class Tx:
     def __init__(self, pcan, Tx_ID):
@@ -28,27 +18,14 @@ class Rx:
         self.Rx_ID = Rx_ID
 
     def receive(self):
-        """ 
-        Summary:
-            This function checks to see if there are any frames on the 
-            bus that we are interested in
-        TODO: 
-            check to see if the Rx_ID matches with the receiving frames 
-            arbitration ID; if not then ignore frame and return false 
-            (Indicating that there are no frames)
-        Returns:
-            data(tuple): data received from the bus
-        """
         data = self.pcan.receive_frame()
         return data
 
 class TP:
     pass
 
-# UDS Class will run the event loop
 class UDS:
     def __init__(self, Tx_ID, Rx_ID):
-
         self.Tx_ID = Tx_ID
         self.Rx_ID = Rx_ID
 
@@ -59,19 +36,76 @@ class UDS:
 
         self.queue = queue.Queue()
 
-        event_thread = threading.Thread(target=self.event_loop)
+        event_thread = threading.Thread(target=self.__event_loop, daemon=True)
         event_thread.start()
-        
-    def event_loop(self):
+
+    def __event_loop(self):
         while True:
             if not self.queue.empty():
-                frame = self.main_queue.get()
-                self.pcan.send_frame(frame)
-                print(frame)
+                frame = self.queue.get()
+                self.tx.transmit(frame)
+                print(f"Frame {frame} transmitted")
+            print("Hello")
 
             time.sleep(1)
 
     def push_frame(self, frame):
-        self.main_queue.put(frame)
+        self.queue.put(frame)
 
-uds = UDS(0x743, 0x763)
+class Ox10:
+    START_SESSION = (0x02, 0x10, 0x03, 0x09, 0x00, 0x00, 0x00, 0x00)
+
+    def __init__(self, uds):
+        self.uds = uds
+
+    def send_start_session_request(self):
+        self.uds.push_frame(Ox10.START_SESSION)
+
+class Ox3E:
+    pass
+
+class Ox22:
+    pass
+
+class Ox2E:
+    pass
+
+class Ox19:
+    DTC_REQUEST = (0x03, 0x19, 0x02, 0x09, 0x00, 0x00, 0x00, 0x00)
+
+    def __init__(self, uds):
+        self.uds = uds
+
+    def send_dtc_request(self):
+        self.uds.push_frame(Ox19.DTC_REQUEST)
+
+class GuiInterface:
+    def __init__(self, master):
+        self.master = master
+        master.title("UDS Interface")
+
+        self.uds = UDS(0x743, 0x763)
+        self.ox19 = Ox19(self.uds)
+        self.ox10 = Ox10(self.uds)
+
+        self.start_session_button = tk.Button(master, text="Start Session", command=self.start_session)
+        self.start_session_button.pack()
+
+        self.send_dtc_button = tk.Button(master, text="Send DTC Request", command=self.send_dtc_request)
+        self.send_dtc_button.pack()
+
+        self.log = tk.Text(master)
+        self.log.pack()
+
+    def start_session(self):
+        self.ox10.send_start_session_request()
+        self.log.insert(tk.END, "Session started\n")
+
+    def send_dtc_request(self):
+        self.ox19.send_dtc_request()
+        self.log.insert(tk.END, "DTC Request sent\n")
+
+# Set up the GUI
+root = tk.Tk()
+gui = GuiInterface(root)
+root.mainloop()

@@ -1,5 +1,5 @@
-from .PCANBasic import *
-from .pcan_constants import *
+from PCANBasic import *
+from pcan_constants import *
 
 class PCAN:
     def __init__(self, channel, baud, message_type) -> None:
