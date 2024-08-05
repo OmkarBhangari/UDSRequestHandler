@@ -48,6 +48,12 @@ class UDS:
                 print(f"Frame {frame} transmitted")
             
             received_frame = self.rx.receive()
+            try:
+                frame_type = frame.validate_frame(received_frame)
+            except Exception as e:
+                print(e)
+            else:
+                pass
             '''
             try:
                 frame_type = validate_frame(received_frame)
