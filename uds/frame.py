@@ -31,9 +31,14 @@ class Frame:
         if frame_type == Frame.SINGLE_FRAME:
             # return SID
             self.sid = hex(frame[1]-0x40)
-            return (self.sid)
+            return self.sid
             
         if frame_type == Frame.FIRST_FRAME:
             # return SID
             self.sid = hex(frame[2]-0x40)
-            return (self.sid)
+            return self.sid
+            
+        if frame_type == Frame.ERROR_FRAME:
+            # return SID
+            self.sid = hex(frame[1])
+            return self.sid
