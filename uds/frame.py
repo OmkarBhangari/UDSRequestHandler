@@ -3,6 +3,7 @@ from UDSException import UDSException
 class Frame:
     SINGLE_FRAME: int = 0
     FIRST_FRAME: int = 1
+    CONSECUTIVE_FRAMES: int=2
     
     def validate_frame(self, response):
         # Check for negative response (NRC)
@@ -19,7 +20,9 @@ class Frame:
         
         if (response[0] & 0xF0) == 0x10:
             return Frame.FIRST_FRAME  # Valid positive response
-
+            
+        if(response[0] & 0xF0) == 0x20:
+            return Frame.CONSECUTIVE_FRAMES
         # If neither, raise an unexpected format exception
         raise Exception("Unexpected response format")
 
