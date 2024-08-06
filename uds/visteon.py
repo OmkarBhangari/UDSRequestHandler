@@ -55,6 +55,8 @@ class UDS:
                 frame_type = self.frame.validate_frame(received_frame)
             except UDSException as e:
                 print(e)
+                sid = self.frame.get_sid(received_frame, Frame.ERROR_FRAME)
+                # push this on the buffer of respective class
             except Exception as e:
                 print(e)
             else:

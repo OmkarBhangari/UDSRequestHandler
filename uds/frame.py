@@ -4,6 +4,7 @@ class Frame:
     SINGLE_FRAME: int = 0
     FIRST_FRAME: int = 1
     CONSECUTIVE_FRAMES: int=2
+    ERROR_FRAME: int = 3
     
     def validate_frame(self, response):
         # Check for negative response (NRC)
