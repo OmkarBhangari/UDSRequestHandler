@@ -4,6 +4,8 @@ import threading
 import ttkbootstrap as ttk
 import asyncio
 from pcan import PCAN  # Ensure the pcan module is correctly installed
+from UDSException import *
+from frame import Frame
 
 class Tx:
     def __init__(self, pcan, Tx_ID):
@@ -31,6 +33,7 @@ class UDS:
         self.Rx_ID = Rx_ID
 
         self.pcan = PCAN("PCAN_USBBUS1", "PCAN_BAUD_500K", "PCAN_MESSAGE_STANDARD")
+        self.frame = Frame()
 
         self.tx = Tx(self.pcan, self.Tx_ID)
         self.rx = Rx(self.pcan, self.Rx_ID)
@@ -49,16 +52,17 @@ class UDS:
             
             received_frame = self.rx.receive()
             try:
-                frame_type = frame.validate_frame(received_frame)
+                frame_type = self.frame.validate_frame(received_frame)
+            except UDSException as e:
+                print(e)
             except Exception as e:
                 print(e)
             else:
-                pass
+                if frame_type == Frame.SINGLE_FRAME:
+                    print("Single Frame Received")
+                else:
+                    print("First Frame Received")
             '''
-            try:
-                frame_type = validate_frame(received_frame)
-            except Exception as e:
-                print(e)
 
             if frame_type == "single frame":
                 extract_data = received_frame
