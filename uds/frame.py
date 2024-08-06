@@ -13,8 +13,8 @@ class Frame:
             raise UDSException.create_exception(nrc)
         
         # If all bytes of the frame are zero
-        if response[0] == 0x00 and response[1] == 0x00:
-            raise Exception("Empty Frame")
+        if all(frame == 0x00 for frame in response):
+             raise Exception("Empty Frame")
 
         if (response[0] & 0xF0) == 0x00 :
             return  Frame.SINGLE_FRAME
