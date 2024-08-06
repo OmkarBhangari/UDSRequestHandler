@@ -38,5 +38,11 @@ class Frame:
             return sid
             
         if frame_type == Frame.ERROR_FRAME:
-            sid = frame[1]
+            sid = frame[2]
             return sid
+        
+    def extract_length_and_data(self, frame):
+        return 0x0b, [0x02, 0x04, 0x05]
+    
+    def hex(self, msg):
+        return tuple([hex(m) for m in msg])

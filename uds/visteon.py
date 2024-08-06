@@ -25,19 +25,47 @@ class Rx:
         return data
 
 class TP:
-    pass
+    def __init__(self, frame, uds):
+        self.block_size = 4
+        self.time_between_consecutive_frames = 20
+        self.frame = frame
+        self.active_transation = None
+        self.uds = uds
+
+        self.buffer = queue.Queue()
+
+        self.data = []
+        self.data_length = None # will be set later when we require to use the service
+        self.remaining_data_length = None # will be set later when we require to use the service
+
+    def push_to_buffer(self, frame, frame_type):
+        self.buffer.put({"frame_type": frame_type, "frame": frame})        
+
+    def main(self):
+        if self.active_transation:
+            if not self.buffer.empty():
+                frame_data = self.buffer.get()
+
+                if frame_data['frame_type'] == Frame.FIRST_FRAME:
+                    self.data_length, self.data = self.frame.extract_length_and_data(frame_data['frame'])
+                    self.uds.push_frame((0x30, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00))
+
 
 class UDS:
+    __Ox19: int = 0x19
+
     def __init__(self, Tx_ID, Rx_ID):
         self.Tx_ID = Tx_ID
         self.Rx_ID = Rx_ID
 
         self.pcan = PCAN("PCAN_USBBUS1", "PCAN_BAUD_500K", "PCAN_MESSAGE_STANDARD")
         self.frame = Frame()
+        self.tp = TP(self.frame, self)
 
         self.tx = Tx(self.pcan, self.Tx_ID)
         self.rx = Rx(self.pcan, self.Rx_ID)
 
+        self.active_transation = None # __class__.__Ox19
         self.queue = queue.Queue()
         self.handlers = {
             0x10: Ox10(self),
@@ -56,6 +84,8 @@ class UDS:
                 print(f"Frame {frame} transmitted")
             
             received_frame = self.rx.receive()
+            print("Received Frame", self.frame.hex(received_frame))
+            
             try:
                 frame_type = self.frame.validate_frame(received_frame)
             except UDSException as e:
@@ -67,12 +97,19 @@ class UDS:
             else:
                 if frame_type == Frame.SINGLE_FRAME:
                     sid = self.frame.get_sid(received_frame, Frame.SINGLE_FRAME)
-                    print("Single Frame Received")
                     self.push_to_buffer(sid, received_frame)
-                else:
-                    print("First Frame Received")
 
-            print(received_frame)
+                elif frame_type == Frame.FIRST_FRAME:
+                    sid = self.frame.get_sid(frame, Frame.FIRST_FRAME)
+                    self.tp.active_transation = sid
+                    self.tp.push_to_buffer(received_frame, Frame.FIRST_FRAME)
+
+                elif frame_type == Frame.CONSECUTIVE_FRAME:
+                    print("CONNNNSECUTIVE FRAMMMMMMMMMME")
+                    self.tp.push_to_buffer(received_frame, Frame.CONSECUTIVE_FRAME)
+
+            self.tp.main()
+
             time.sleep(1)
 
     def push_frame(self, frame):
@@ -97,7 +134,6 @@ class Ox10:
 
     def push_frame_to_buffer(self, frame):
         self.buffer.append(frame)
-        print("Frame added to Ox10 buffer", self.buffer)
 
 class Ox19:
     DTC_REQUEST = (0x03, 0x19, 0x02, 0x09, 0x00, 0x00, 0x00, 0x00)
@@ -111,7 +147,6 @@ class Ox19:
 
     def push_frame_to_buffer(self, frame):
         self.buffer.append(frame)
-        print("Frame added to Ox19 buffer", self.buffer)
 
 class GuiInterface:
     def __init__(self, master):
