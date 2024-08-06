@@ -22,23 +22,21 @@ class Frame:
         if (response[0] & 0xF0) == 0x10:
             return Frame.FIRST_FRAME  # Valid positive response
             
-        if(response[0] & 0xF0) == 0x20:
-            return Frame.CONSECUTIVE_FRAMES
+        if (response[0] & 0xF0) == 0x20:
+            return Frame.CONSECUTIVE_FRAME
+        
         # If neither, raise an unexpected format exception
         raise Exception("Unexpected response format")
 
     def get_sid(self, frame, frame_type):
         if frame_type == Frame.SINGLE_FRAME:
-            # return SID
-            self.sid = hex(frame[1]-0x40)
-            return self.sid
+            sid = frame[1] - 0x40
+            return sid
             
         if frame_type == Frame.FIRST_FRAME:
-            # return SID
-            self.sid = hex(frame[2]-0x40)
-            return self.sid
+            sid = frame[2] - 0x40
+            return sid
             
         if frame_type == Frame.ERROR_FRAME:
-            # return SID
-            self.sid = hex(frame[1])
-            return self.sid
+            sid = frame[1]
+            return sid

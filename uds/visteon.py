@@ -39,6 +39,11 @@ class UDS:
         self.rx = Rx(self.pcan, self.Rx_ID)
 
         self.queue = queue.Queue()
+        self.handlers = {
+            0x10: Ox10(self),
+            0x19: Ox19(self)
+            # Add other handlers as needed
+        }
 
         event_thread = threading.Thread(target=self.__event_loop, daemon=True)
         event_thread.start()
@@ -56,28 +61,16 @@ class UDS:
             except UDSException as e:
                 print(e)
                 sid = self.frame.get_sid(received_frame, Frame.ERROR_FRAME)
-                # push this on the buffer of respective class
+                self.push_to_buffer(sid, received_frame)
             except Exception as e:
                 print(e)
             else:
                 if frame_type == Frame.SINGLE_FRAME:
                     sid = self.frame.get_sid(received_frame, Frame.SINGLE_FRAME)
                     print("Single Frame Received")
-                    # extract and push the data to the buffer of respective class
-                
+                    self.push_to_buffer(sid, received_frame)
                 else:
                     print("First Frame Received")
-            '''
-
-            if frame_type == "single frame":
-                extract_data = received_frame
-                if extract_data.recepient == "0x19":
-                    # send data to 0x19 and trigger an event
-                    pass
-                elif extract_data.recepient == "0x19":
-                    # send data to 0x10 and trigger an event
-                    pass
-            '''
 
             print(received_frame)
             time.sleep(1)
@@ -85,33 +78,40 @@ class UDS:
     def push_frame(self, frame):
         self.queue.put(frame)
 
+    def push_to_buffer(self, sid, frame):
+        handler = self.handlers.get(sid)
+        if handler:
+            handler.push_frame_to_buffer(frame)
+        else:
+            print(f"No handler for SID {sid}")
+
 class Ox10:
     START_SESSION = (0x02, 0x10, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00)
 
     def __init__(self, uds):
         self.uds = uds
+        self.buffer = []
 
     async def send_start_session_request(self):
         self.uds.push_frame(Ox10.START_SESSION)
 
-class Ox3E:
-    pass
-
-class Ox22:
-    pass
-
-class Ox2E:
-    pass
+    def push_frame_to_buffer(self, frame):
+        self.buffer.append(frame)
+        print("Frame added to Ox10 buffer", self.buffer)
 
 class Ox19:
     DTC_REQUEST = (0x03, 0x19, 0x02, 0x09, 0x00, 0x00, 0x00, 0x00)
 
     def __init__(self, uds):
         self.uds = uds
-        self.buffer = None
+        self.buffer = []
 
     async def send_dtc_request(self):
         self.uds.push_frame(Ox19.DTC_REQUEST)
+
+    def push_frame_to_buffer(self, frame):
+        self.buffer.append(frame)
+        print("Frame added to Ox19 buffer", self.buffer)
 
 class GuiInterface:
     def __init__(self, master):
