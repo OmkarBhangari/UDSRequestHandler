@@ -22,3 +22,11 @@ class Frame:
 
         # If neither, raise an unexpected format exception
         raise Exception("Unexpected response format")
+
+    def get_sid(self, frame, frame_type):
+        if frame_type == Frame.SINGLE_FRAME:
+            # return SID
+            pass
+        if frame_type == Frame.FIRST_FRAME:
+            # return SID
+            pass

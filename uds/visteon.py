@@ -59,7 +59,9 @@ class UDS:
                 print(e)
             else:
                 if frame_type == Frame.SINGLE_FRAME:
+                    sid = self.frame.get_sid(received_frame, Frame.SINGLE_FRAME)
                     print("Single Frame Received")
+                    # extract and push the data to the buffer of respective class
                 else:
                     print("First Frame Received")
             '''
@@ -103,6 +105,7 @@ class Ox19:
 
     def __init__(self, uds):
         self.uds = uds
+        self.buffer = None
 
     async def send_dtc_request(self):
         self.uds.push_frame(Ox19.DTC_REQUEST)
