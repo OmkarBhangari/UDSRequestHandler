@@ -25,10 +25,11 @@ class Rx:
         return data
 
 class TP:
-    CONTROL_FRAME = (0x30, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00)
+    #CONTROL_FRAME = (0x30, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00)
     def __init__(self, frame, uds):
-        self.block_size = 4
-        self.temp_block_size = 0
+        #self.block_size = 4
+        self.block_size = 0
+        #self.temp_block_size = 0
         self.time_between_consecutive_frames = 20
         self.frame = frame
         self.active_transation = None
@@ -51,18 +52,41 @@ class TP:
                 if frame_data['frame_type'] == Frame.FIRST_FRAME:
                     self.data_length, self.data = self.frame.extract_length_and_data(frame_data['frame'])
                     self.remaining_data_length = self.data_length
-                    self.uds.push_frame(TP.CONTROL_FRAME)
-                    self.temp_block_size = self.block_size
+                    #self.uds.push_frame(TP.CONTROL_FRAME)
+                    #self.temp_block_size = self.block_size
+                    self.block_size = self.remaining_data_length
+
+                    if self.block_size<=6:
+                        self.block_size = 0
+                        self.uds.push_frame(self.frame.construct_flow_control(self.block_size, self.time_between_consecutive_frames))
+                    else:
+                        self.block_size = self.block_size // 7
+                        self.uds.push_frame(self.frame.construct_flow_control(self.block_size, self.time_between_consecutive_frames))
+                        #self.block_size = self.block_size // 7
+
+                    self.remaining_data_length -= 6
 
                 if frame_data['frame_type'] == Frame.CONSECUTIVE_FRAME:
                     print("Consecutive Frame : ", frame_data['frame'])
-                    self.temp_block_size -= 1
-                    self.remaining_data_length -= 1
+                    """ self.temp_block_size -= 1 
+                    self.remaining_data_length -= 1 """
+                    if self.remaining_data_length <= 7:
+                        self.remaining_data_length = 0
+                    else:
+                        self.remaining_data_length = self.remaining_data_length - 7
+                    
                 
-                if self.temp_block_size == 0:
-                    self.temp_block_size = self.block_size
-                    block_size = min(self.remaining_data_length, self.block_size)
-                    self.uds.push_frame(self.frame.construct_flow_control(block_size, self.time_between_consecutive_frames))
+                """ if self.temp_block_size == 0:
+                    #self.temp_block_size = self.block_size
+                    #block_size = min(self.remaining_data_length, self.block_size)
+                    if self.block_size<=6:
+                        block_size = 0
+                        self.uds.push_frame(self.frame.construct_flow_control(block_size, self.time_between_consecutive_frames))
+                    else:
+                        block_size = self.block_size // 7
+                        self.uds.push_frame(self.frame.construct_flow_control(block_size, self.time_between_consecutive_frames))
+
+                    self.temp_block_size = 1 """
 
                 if self.remaining_data_length == 0:
                     self.active_transation = None
