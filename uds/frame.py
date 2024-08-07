@@ -49,7 +49,8 @@ class Frame:
         len = (((frame[0] & 0x0F) << 8) | frame[1]) - 6
         return  len
     
-    def hex(self, msg):
+    @staticmethod
+    def hex(msg):
         return tuple([hex(m) for m in msg])
     
     def construct_flow_control(self, block_size, time_between_consecutive_frame):

@@ -34,6 +34,7 @@ class Tx:
         :param data: Data to be transmitted.
         """
         self.pcan.send_frame(self.Tx_ID, data)
+        print(f"{Colors.blue}Transmitted : {Frame.hex(data)}{Colors.reset}")
 
 
 class Rx:
@@ -58,6 +59,7 @@ class Rx:
         :return: Data received from the frame.
         """
         data = self.pcan.receive_frame()
+        print(f"{Colors.yellow}Received : {Frame.hex(data)}{Colors.reset}")
         return data
 
 
@@ -114,7 +116,7 @@ class UDS:
 
         except UDSException as exception:
             # Handle specific UDSException errors
-            print(exception)
+            print(f"{Colors.red}{exception}{Colors.reset}")
             # Get the Service ID (SID) for an error frame
             sid = self.frame.get_sid(incoming_frame, Frame.ERROR_FRAME)
             # Route the frame based on the error SID
@@ -122,7 +124,7 @@ class UDS:
 
         except Exception as exception:
             # Handle any other exceptions
-            print(exception)
+            print(f"{Colors.red}{exception}{Colors.reset}")
         else:
             # If no exceptions, process the frame based on its type
 

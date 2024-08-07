@@ -22,7 +22,7 @@ class GuiInterface:
         self.log.pack()
 
     async def start_session(self):
-        await self.ox10.send_start_session_request()
+        await self.ox10.start_session()
         self.log.insert(ttk.END, "Session started\n")
 
     async def send_dtc_request(self):
