@@ -1,7 +1,6 @@
 from rich.table import Table
 from rich.console import Console
 
-from DTCRequestHandler import UDS
 
 # Initialize PCANBasic instance and channel
 # self.pcan = PCANBasic.PCANBasic()
@@ -9,17 +8,12 @@ from DTCRequestHandler import UDS
 # self.baudrate = PCANBasic.PCAN_BAUD_500K
 # self.pcan_channel = self.pcan.Initialize(self.channel, self.baudrate)
 
-arbitration_id = 0x743
 
-handler = UDS("PCAN_USBBUS1", "PCAN_BAUD_500K", "PCAN_MESSAGE_STANDARD", arbitration_id)
-handler.start_session()  # Activates session and changes state to IDLE
-data = handler.request_for_DTC()  # Sends DTC request and changes state to RECEIVE
 
 class DECODE:
     def __init__(self, data) -> None:
         # Remove trailing 170 values
-        while data and data[-1] == 170:
-            data.pop()
+       
 
         # Initialize table and console
         self.table = Table(title="Hex Values and Status Mask")
