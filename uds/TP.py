@@ -8,7 +8,7 @@ class TP:
         self.temp_block_size = 0
         self.time_between_consecutive_frames = 20
         self.frame = frame
-        self.active_transation = None
+        self.requesting_class = None
         self.uds = uds
 
         self.buffer = queue.Queue()
@@ -18,11 +18,11 @@ class TP:
         self.no_of_frames = None # stores the number of bytes to be send by ECU
         self.counter = 0
 
-    def push_to_buffer(self, frame, frame_type):
+    def buffer_frame_data(self, frame, frame_type):
         self.buffer.put({"frame_type": frame_type, "frame": frame})        
 
     def main(self):
-        if self.active_transation is not None:
+        if self.requesting_class is not None:
             if not self.buffer.empty():
                 frame_data = self.buffer.get()
                 self.data.append(frame_data['frame'])
@@ -43,12 +43,12 @@ class TP:
                 
                 # after we have received all frames we can terminate the transaction
                 if self.no_of_frames == 0:
-                    self.active_transation.push_frame_to_buffer(self.data)
+                    self.requesting_class.buffer_frame(self.data)
                     self.data = []
-                    self.active_transation = None
+                    self.requesting_class = None
                     return
 
                 # if counter is 0; it means that we need to start a new block cycle by sending a flow control frame
                 if self.counter == 0:
                     self.counter = min(self.no_of_frames, self.block_size)
-                    self.uds.push_frame(self.frame.construct_flow_control(self.counter, self.time_between_consecutive_frames))
+                    self.uds.queue_frame(self.frame.construct_flow_control(self.counter, self.time_between_consecutive_frames))

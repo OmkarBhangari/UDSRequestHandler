@@ -33,14 +33,16 @@ class Frame:
             sid = frame[1] - 0x40
             return sid
             
-        if frame_type == Frame.FIRST_FRAME:
+        elif frame_type == Frame.FIRST_FRAME:
             sid = frame[2] - 0x40
-            print("HOOOOOOOOOOOOOOOOOOOOOOOOOOOO", self.hex(frame), hex(frame[2]))
             return sid
             
-        if frame_type == Frame.ERROR_FRAME:
+        elif frame_type == Frame.ERROR_FRAME:
             sid = frame[2]
             return sid
+        
+        else:
+            return False
         
     def extract_length(self, frame):
         # data = frame[5:]

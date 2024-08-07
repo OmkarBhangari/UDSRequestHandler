@@ -9,9 +9,9 @@ class Ox19:
         self.buffer = queue.Queue()
 
     async def send_dtc_request(self):
-        self.uds.push_frame(Ox19.DTC_REQUEST)
+        self.uds.queue_frame(Ox19.DTC_REQUEST)
 
-    def push_frame_to_buffer(self, frame):
+    def buffer_frame(self, frame):
         self.buffer.put(frame)
 
     def main(self):

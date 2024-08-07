@@ -8,7 +8,7 @@ class Ox10:
         self.buffer = queue.Queue()
 
     async def send_start_session_request(self):
-        self.uds.push_frame(Ox10.START_SESSION)
+        self.uds.queue_frame(Ox10.START_SESSION)
 
-    def push_frame_to_buffer(self, frame):
+    def buffer_frame(self, frame):
         self.buffer.put(frame)
