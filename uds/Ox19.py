@@ -1,5 +1,6 @@
 import queue
 from . import Colors
+from .TP import TP 
 
 class Ox19:
     DTC_REQUEST = (0x03, 0x19, 0x02, 0x09, 0x00, 0x00, 0x00, 0x00)
@@ -17,4 +18,5 @@ class Ox19:
     def main(self):
         if not self.buffer.empty():
             data = self.buffer.get()
-            print(f"{Colors.green}{data}{Colors.reset}")
+            DTC_data=TP.extract_data(data)
+            print(f"{Colors.green}{DTC_data}{Colors.reset}")

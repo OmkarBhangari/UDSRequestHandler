@@ -19,7 +19,16 @@ class TP:
         self.counter = 0
 
     def buffer_frame_data(self, frame, frame_type):
-        self.buffer.put({"frame_type": frame_type, "frame": frame})        
+        self.buffer.put({"frame_type": frame_type, "frame": frame})  
+              
+    @staticmethod   
+    def  extract_data(data):
+        all_data = []
+        all_data.extend(data[0][2:])
+        for i in range(1, len(data)):
+            #print(f"Consecutive frame: {data[i]}")
+            all_data.extend(data[i][1:] ) # Exclude the first byte (frame identifier)
+        return all_data
 
     def main(self):
         if self.requesting_class is not None:
