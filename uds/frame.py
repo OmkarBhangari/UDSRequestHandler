@@ -42,7 +42,9 @@ class Frame:
             return sid
         
     def extract_length_and_data(self, frame):
-        return  ( (frame[0] & 0x0F)<<8 )  |  frame[1],frame[5:]
+        data = frame[5:]
+        len = (((frame[0] & 0x0F) << 8) | frame[1]) - 6
+        return  len, data
     
     def hex(self, msg):
         return tuple([hex(m) for m in msg])
