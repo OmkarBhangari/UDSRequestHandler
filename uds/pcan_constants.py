@@ -1,4 +1,4 @@
-from PCANBasic import *
+from .PCANBasic import *
 
 PCAN_CHANNELS = {
     "PCAN_NONEBUS": PCAN_NONEBUS, 

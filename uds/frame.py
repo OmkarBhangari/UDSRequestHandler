@@ -1,4 +1,4 @@
-from UDSException import UDSException
+from .UDSException import UDSException
 
 class Frame:
     SINGLE_FRAME: int = 0
