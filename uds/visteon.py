@@ -6,6 +6,7 @@ import asyncio
 from pcan import PCAN  # Ensure the pcan module is correctly installed
 from UDSException import *
 from frame import Frame
+import Colors
 
 class Tx:
     def __init__(self, pcan, Tx_ID):
@@ -45,13 +46,14 @@ class TP:
         self.buffer.put({"frame_type": frame_type, "frame": frame})        
 
     def main(self):
-        if self.active_transation:
+        if self.active_transation is not None:
             if not self.buffer.empty():
                 frame_data = self.buffer.get()
+                self.data.append(frame_data['frame'])
 
                 if frame_data['frame_type'] == Frame.FIRST_FRAME:
                     # extract the number of bytes and 3 bytes of data from FF
-                    self.bytes, self.data = self.frame.extract_length_and_data(frame_data['frame'])
+                    self.bytes = self.frame.extract_length(frame_data['frame'])
 
                     # calculate the total number of frames to be sent by ECU
                     self.no_of_frames = self.bytes // 7
@@ -65,6 +67,8 @@ class TP:
                 
                 # after we have received all frames we can terminate the transaction
                 if self.no_of_frames == 0:
+                    self.active_transation.push_frame_to_buffer(self.data)
+                    self.data = []
                     self.active_transation = None
                     return
 
@@ -109,7 +113,6 @@ class UDS:
                 print(f"Frame {frame} transmitted")
             
             received_frame = self.rx.receive()
-            print("Received Frame", self.frame.hex(received_frame))
             
             try:
                 frame_type = self.frame.validate_frame(received_frame)
@@ -125,8 +128,8 @@ class UDS:
                     self.push_to_buffer(sid, received_frame)
 
                 elif frame_type == Frame.FIRST_FRAME:
-                    sid = self.frame.get_sid(frame, Frame.FIRST_FRAME)
-                    self.tp.active_transation = sid
+                    sid = self.frame.get_sid(received_frame, Frame.FIRST_FRAME)
+                    self.tp.active_transation = self.handlers.get(sid)
                     self.tp.push_to_buffer(received_frame, Frame.FIRST_FRAME)
 
                 elif frame_type == Frame.CONSECUTIVE_FRAME:
@@ -134,6 +137,7 @@ class UDS:
                     self.tp.push_to_buffer(received_frame, Frame.CONSECUTIVE_FRAME)
 
             self.tp.main()
+            self.handlers.get(0x19).main()
 
             time.sleep(1)
 
@@ -152,26 +156,31 @@ class Ox10:
 
     def __init__(self, uds):
         self.uds = uds
-        self.buffer = []
+        self.buffer = queue.Queue()
 
     async def send_start_session_request(self):
         self.uds.push_frame(Ox10.START_SESSION)
 
     def push_frame_to_buffer(self, frame):
-        self.buffer.append(frame)
+        self.buffer.put(frame)
 
 class Ox19:
     DTC_REQUEST = (0x03, 0x19, 0x02, 0x09, 0x00, 0x00, 0x00, 0x00)
 
     def __init__(self, uds):
         self.uds = uds
-        self.buffer = []
+        self.buffer = queue.Queue()
 
     async def send_dtc_request(self):
         self.uds.push_frame(Ox19.DTC_REQUEST)
 
     def push_frame_to_buffer(self, frame):
-        self.buffer.append(frame)
+        self.buffer.put(frame)
+
+    def main(self):
+        if not self.buffer.empty():
+            data = self.buffer.get()
+            print(f"{Colors.green}{data}{Colors.reset}")
 
 class GuiInterface:
     def __init__(self, master):

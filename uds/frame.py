@@ -35,16 +35,17 @@ class Frame:
             
         if frame_type == Frame.FIRST_FRAME:
             sid = frame[2] - 0x40
+            print("HOOOOOOOOOOOOOOOOOOOOOOOOOOOO", self.hex(frame), hex(frame[2]))
             return sid
             
         if frame_type == Frame.ERROR_FRAME:
             sid = frame[2]
             return sid
         
-    def extract_length_and_data(self, frame):
-        data = frame[5:]
+    def extract_length(self, frame):
+        # data = frame[5:]
         len = (((frame[0] & 0x0F) << 8) | frame[1]) - 6
-        return  len, data
+        return  len
     
     def hex(self, msg):
         return tuple([hex(m) for m in msg])
