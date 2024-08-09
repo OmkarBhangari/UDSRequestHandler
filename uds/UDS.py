@@ -4,7 +4,7 @@ from .TP import TP
 from .UDSException import *  
 
 from .Ox10 import Ox10  
-from .Ox19 import Ox19  
+from .Ox19 import Ox19
 
 import time  # Importing the time module for sleep functionality
 import queue  # Importing the queue module for thread-safe data exchange

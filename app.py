@@ -3,7 +3,7 @@ import ttkbootstrap as ttk
 import asyncio
 from uds import UDS, Ox19, Ox10
 
-class GuiInterface:
+""" class GuiInterface:
     def __init__(self, master):
         self.master = master
         master.title("UDS Interface")
@@ -30,7 +30,7 @@ class GuiInterface:
     def run_async_function(self, async_func):
         def wrapper():
             asyncio.run_coroutine_threadsafe(async_func(), asyncio_loop)
-        return wrapper
+        return wrapper """
 
 class UdsWrapper:
     def __init__(self, tx_ID, rx_ID):
@@ -39,13 +39,13 @@ class UdsWrapper:
         self.ox10 = Ox10(self.uds)
         self.sid_handlers = {}
 
-    async def start_session(self, session_type=1):
+    async def start_session(self):
         """Start a diagnostic session."""
-        return await self.ox10.start_session(session_type)
+        return await self.ox10.start_session()
 
-    async def send_dtc_request(self, dtc_type=0):
+    async def send_dtc_request(self):
         """Send a DTC request."""
-        return await self.ox19.send_dtc_request(dtc_type)
+        return await self.ox19.send_dtc_request()
 
     def sid_handler(self, sid, handler):
         self.sid_handlers[sid] = handler
@@ -64,7 +64,7 @@ class UdsWrapper:
         """Close the UDS connection."""
         await self.uds.close()
 
-# Function to run the asyncio event loop
+""" # Function to run the asyncio event loop
 def start_async_loop(loop):
     asyncio.set_event_loop(loop)
     loop.run_forever()
@@ -77,4 +77,4 @@ t.start()
 # Set up the GUI
 root = ttk.Window()
 gui = GuiInterface(root)
-root.mainloop()
+root.mainloop() """
