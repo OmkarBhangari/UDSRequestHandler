@@ -12,7 +12,7 @@ class DTC_gui:
         self.window.title('Properties')
         self.window.geometry('1000x800')
         self.window.resizable(False, False)
-        self.uds_wrap = UdsWrapper(0x743,0x763)
+        
 
         self.style = ttk.Style()
 
@@ -76,6 +76,12 @@ class DTC_gui:
         self.message_button = ttk.Button(self.message_tab, text="Start Session", width=90, command=self.run_async_function(self.start_session), style='Bold.TButton')
         self.message_button.grid(row=0, column=0, pady=7, sticky="w")
 
+        # Initialize attributes with default values
+        self.Channel = "None"
+        self.Baudrate = "None"
+        self.Msg_type = "None"
+        self.uds_wrap = None
+
         # Update grid weights to ensure the notebook resizes properly
         self.window.grid_rowconfigure(1, weight=1)
         self.window.grid_columnconfigure(0, weight=1)
@@ -126,9 +132,16 @@ class DTC_gui:
         self.baudrate_dropdown = ttk.Combobox(self.configure_window, textvariable=self.baudrate_name, values=self.baudrate_list, width=40, state='readonly')
         self.baudrate_dropdown.grid(row=2, column=1, padx=10, pady=15)
 
+        # Message Type label and dropdown
+        ttk.Label(self.configure_window, text='Message Type').grid(row=3, column=0, padx=10, pady=10, sticky="w")
+        self.msgtype_list = list(pcan_constants.PCAN_MESSAGE_TYPES.keys())
+        self.msgtype_name = tk.StringVar(value="None")
+        self.msgtype_dropdown = ttk.Combobox(self.configure_window, textvariable=self.msgtype_name, values=self.msgtype_list, width=40, state='readonly')
+        self.msgtype_dropdown.grid(row=3, column=1, padx=10, pady=15)
+
         # Submit button
         self.ok_button = ttk.Button(self.configure_window, text="OK", width=10, command=self.close_configure_window, style='White.TButton')
-        self.ok_button.grid(row=3, column=0, padx=10, pady=20, sticky="w")
+        self.ok_button.grid(row=4, column=0, padx=10, pady=20, sticky="w")
 
         self.on_interface_change(None)
 
@@ -146,8 +159,13 @@ class DTC_gui:
         self.Interface = self.interfaceName.get()
         self.Channel = self.channel_name.get() 
         self.Baudrate = self.baudrate_name.get()  
-        print(self.Interface, self.Channel, self.Baudrate)
+        self.Msg_type = self.msgtype_name.get()
 
+        # Initialize UdsWrapper here
+        self.uds_wrap = UdsWrapper(0x743, 0x763, self.Channel, self.Baudrate, self.Msg_type)
+        print(self.Interface, self.Channel, self.Baudrate, self.Msg_type)
+
+        ######## """""" To be used when things have to be added in the trace tab
         self.display_trace.config(state='normal')  # Make sure the widget is in normal state before inserting
         self.display_trace.delete("1.0", tk.END)  # Clear previous content
         self.display_trace.insert(tk.END, str(pcan_constants.PCAN_MESSAGE_TYPES.keys()))  # Insert new results
@@ -161,7 +179,6 @@ class DTC_gui:
         await self.uds_wrap.start_session()
         # self.run_async_function(self.uds_wrap.start_session())
 
-# 
         if not hasattr(self, 'message'):
             self.message = Message(self.message_tab, self.display_trace)
         
@@ -202,16 +219,17 @@ class DTC_gui:
             asyncio.run_coroutine_threadsafe(async_func(), asyncio_loop)
         return wrapper
 
+
+
 class Message:
     count = 0
-    
 
     def __init__(self, parent_frame, display_trace):
         self.parent_frame = parent_frame
         self.display_trace = display_trace
         Message.count += 1
         self.button_count = 0
-        self.new_buttons = []
+        self.buttons_info = {}
 
         # Create the "New Request" button
         self.new_request_button = ttk.Button(self.parent_frame, text="New Request", width=90, command=self.create_new_request, style='Bold.TButton')
@@ -219,58 +237,79 @@ class Message:
 
     def start(self):
         # Any specific logic to start the message
+        self.new_request_button.config(state="normal")
         print("Session started")
 
     def stop(self):
         # Any specific logic to stop the message
+        self.new_request_button.config(state="disabled")
         print("Session stopped")
 
     def create_new_request(self):
+
+        ##### define the original gui code
         self.button_count += 1
 
         # Open a new window for the new request details
         self.new_request_window = ttk.Toplevel()
         self.new_request_window.title(f"Request Details {self.button_count}")
-        self.new_request_window.geometry("400x200")
+        self.new_request_window.geometry("400x300")
 
         # Add labels and entry fields
-        ttk.Label(self.new_request_window, text="Enter Details:").pack(pady=10)
-        self.details_entry_name = tk.StringVar()
-        self.details_entry = tk.Entry(self.new_request_window, width=40, textvariable=self.details_entry_name)
-        self.details_entry.pack(pady=10)
+        """ ttk.Label(self.new_request_window, text="Name:").pack(pady=5)
+        self.name_entry = tk.StringVar()
+        ttk.Entry(self.new_request_window, width=40, textvariable=self.name_entry).pack(pady=5)
+        
+        ttk.Label(self.new_request_window, text="Age:").pack(pady=5)
+        self.age_entry = tk.StringVar()
+        ttk.Entry(self.new_request_window, width=40, textvariable=self.age_entry).pack(pady=5)
+        
+        ttk.Label(self.new_request_window, text="Gender:").pack(pady=5)
+        self.gender_entry = tk.StringVar()
+        ttk.Entry(self.new_request_window, width=40, textvariable=self.gender_entry).pack(pady=5) """
+
+        ttk.Label(self.new_request_window, text="Service ID").pack(pady=5)
+        self.sid_list = ['0x19: ReadDTCInformation',
+                         '0x22: ReadDataByIdentifier',
+                         '0x2E: WriteDataByIdentifier']
+        self.sid_name = tk.StringVar(value=self.sid_list[0])
+        self.sid_dropdown = ttk.Combobox(self.new_request_window, textvariable=self.sid_name, values=self.sid_list, width=40, state='readonly')
+        self.sid_dropdown.pack(pady=5)
         
         # Add OK button to close the window
         ttk.Button(self.new_request_window, text="OK", command=self.save_request_details).pack(pady=10)
 
     def save_request_details(self):
-        button_text = self.details_entry_name.get()
+        name = self.name_entry.get()
+        age = self.age_entry.get()
+        gender = self.gender_entry.get()
 
-        # Create a new button with the entered text
-        new_button = ttk.Button(self.parent_frame, text=button_text, width=90, command=lambda: self.open_text_tab(button_text), style='Bold.TButton')
+        # Create a new button with the entered name
+        new_button = ttk.Button(self.parent_frame, text=name, width=90, command=lambda: self.display_request_details(name, age, gender), style='Bold.TButton')
         new_button.grid(row=self.button_count, column=0, pady=7, sticky="w")
 
-        # Save the button text to buttons_info
-        #self.buttons_info[new_button] = button_text
+        # Save the button details
+        self.buttons_info[new_button] = (name, age, gender)
 
         # Update the row configuration
         self.parent_frame.grid_rowconfigure(self.button_count, weight=0)
 
         self.new_request_button = ttk.Button(self.parent_frame, text="New Request", width=90, command=self.create_new_request, style='Bold.TButton')
-        self.new_request_button.grid(row=self.button_count+1, column=0, pady=7, sticky="w")
+        self.new_request_button.grid(row=self.button_count + 1, column=0, pady=7, sticky="w")
 
         # Destroy the new request window
         self.new_request_window.destroy()
 
-    def open_text_tab(self, text):
-        """ # Create a new tab to display the button's text
-        new_tab = ttk.Frame(self.notebook)
-        self.notebook.add(new_tab, text=f"Request {len(self.notebook.tabs()) + 1}")
+    def display_request_details(self, name, age, gender):
+        # Open a new window to display the details
+        details_window = ttk.Toplevel()
+        details_window.title("Request Details")
+        details_window.geometry("300x200")
 
-        text_widget = tk.Text(new_tab, wrap=tk.WORD, state='normal')
-        text_widget.pack(expand=True, fill=tk.BOTH)
-        text_widget.insert(tk.END, f"Details: {text}")
-        text_widget.config(state='disabled') """
-        print("NEwwwwwwww")
+        # Add labels to display the details
+        ttk.Label(details_window, text=f"Name: {name}").pack(pady=5)
+        ttk.Label(details_window, text=f"Age: {age}").pack(pady=5)
+        ttk.Label(details_window, text=f"Gender: {gender}").pack(pady=5)
 
 # Create and start the application
 def start_async_loop(loop):
