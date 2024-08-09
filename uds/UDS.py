@@ -68,14 +68,14 @@ class UDS:
     UDS (Unified Diagnostic Services) class to manage CAN communication and handle different frames.
     """
 
-    def __init__(self, Tx_ID, Rx_ID):
+    def __init__(self, Tx_ID, Rx_ID,channel,baud_rate,message_type):
         """
         Initializes the UDS class with transmission and reception IDs.
 
         :param Tx_ID: Transmission ID.
         :param Rx_ID: Reception ID.
         """
-        self.pcan = PCAN("PCAN_USBBUS1", "PCAN_BAUD_500K", "PCAN_MESSAGE_STANDARD")
+        self.pcan = PCAN(channel,baud_rate,message_type)
         self.frame = Frame()
         self.tp = TP(self.frame, self)
 

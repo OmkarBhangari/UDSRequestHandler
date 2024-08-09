@@ -33,8 +33,8 @@ from uds import UDS, Ox19, Ox10
         return wrapper """
 
 class UdsWrapper:
-    def __init__(self, tx_ID, rx_ID):
-        self.uds = UDS(tx_ID, rx_ID)
+    def __init__(self, tx_ID, rx_ID,channel,baud_rate,message_type):
+        self.uds = UDS(tx_ID, rx_ID,channel,baud_rate,message_type)
         self.ox19 = Ox19(self.uds)
         self.ox10 = Ox10(self.uds)
         self.sid_handlers = {}
