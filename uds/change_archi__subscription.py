@@ -4,8 +4,10 @@ import threading
 import time
 from rich.table import Table
 from rich.console import Console
-from .PCANBasic import *
-from .pcan_constants import *
+from abc import ABC, abstractmethod
+from PCANBasic import *
+from pcan_constants import *
+
 class Colors:
     BLUE = "\033[94m"
     YELLOW = "\033[93m"
@@ -30,54 +32,83 @@ class EventManager:
         if event_type in self.subscribers:
             for callback in self.subscribers[event_type]:
                 callback(data)
-class PCAN:
-    def __init__(self,event_manager : EventManager , channel, baud, message_type) :
-        self.event_manager=event_manager
-        self.pcan = PCANBasic()  # Initialize the PCANBasic instance
-        self.channel = PCAN_CHANNELS[channel]  # Define the PCAN channel you are using (e.g., PCAN_USBBUS1 for the first USB channel)
-        self.baudrate = PCAN_BAUD_RATES[baud]  # Define the baud rate (e.g., PCAN_BAUD_500K for 500 kbps)
-        self.pcan_channel = self.pcan.Initialize(self.channel, self.baudrate)  # Initialize the PCAN channel
+
+class HardwareInterface(ABC):
+    @abstractmethod
+    def __init__(self, event_manager: EventManager, **kwargs):
+        pass
+
+    @abstractmethod
+    def send_frame(self, arbitration_id, data):
+        pass
+
+    @abstractmethod
+    def receive_frame(self):
+        pass
+
+class PCAN(HardwareInterface):
+    def __init__(self, event_manager: EventManager, channel, baud, message_type):
+        super().__init__(event_manager)
+        self.event_manager = event_manager
+        self.pcan = PCANBasic()
+        self.channel = PCAN_CHANNELS[channel]
+        self.baudrate = PCAN_BAUD_RATES[baud]
+        self.pcan_channel = self.pcan.Initialize(self.channel, self.baudrate)
         self.message_type = PCAN_MESSAGE_TYPES[message_type]
-        self.event_manager.subscribe("SEND_FRAME",self.send_frame)
-        self.event_manager.subscribe("RECEIVE_FRAME",self.receive_frame)
-
-        # replace this with better error handling structure
+        
         if self.pcan_channel != PCAN_ERROR_OK:
-            print("Error initializing PCAN channel:", self.pcan_channel)
-            exit(1)  
+            raise RuntimeError(f"Error initializing PCAN channel: {self.pcan_channel}")
 
-        def send_frame(self, arbitration_id, data):
-            frame=TPCANMsg ()
-            frame.ID=arbitration_id
-            frame.MSGTYPE=self.message_type
-            frame.DATA=data
-            frame.LEN=len(data)
+    def send_frame(self, arbitration_id, data):
+        frame = TPCANMsg()
+        frame.ID = arbitration_id
+        frame.MSGTYPE = self.message_type
+        frame.DATA = data
+        frame.LEN = len(data)
 
-            result = self.pcan.Write(self.channel, frame)  
-            if result != PCAN_ERROR_OK:
-              print("Error transmitting CAN message:", result) 
+        result = self.pcan.Write(self.channel, frame)
+        if result != PCAN_ERROR_OK:
+            raise RuntimeError(f"Error transmitting CAN message: {result}")
 
-        def receive_frame(self)-> None:
-            result, msg, timestamp = self.pcan.Read(self.channel)
-           
-            if result == PCAN_ERROR_OK:
-                frame = {
-                    'id': msg.ID,
-                    'data': tuple(msg.DATA[:msg.LEN])
-                }
-                self.event_manager.publish("FRAME_RECEIVED", frame)
-            else:
-                print(f"Error receiving frame: {result}")               
-       
+    def receive_frame(self):
+        result, msg, timestamp = self.pcan.Read(self.channel)
+        if result == PCAN_ERROR_OK:
+            frame = {
+                'id': msg.ID,
+                'data': tuple(msg.DATA[:msg.LEN])
+            }
+            self.event_manager.publish("FRAME_RECEIVED", frame)
+        else:
+            raise RuntimeError(f"Error receiving frame: {result}")
+
+class HardwareWrapper:
+    def __init__(self, event_manager: EventManager, hardware_type: str, **kwargs):
+        self.event_manager = event_manager
+        self.hardware = self._create_hardware(hardware_type, **kwargs)
+        self.event_manager.subscribe("SEND_FRAME", self.send_frame)
+        self.event_manager.subscribe("RECEIVE_FRAME", self.receive_frame)
+
+    def _create_hardware(self, hardware_type: str, **kwargs):
+        if hardware_type.upper() == "PCAN":
+            return PCAN(self.event_manager, **kwargs)
+        # Add more hardware types here as needed
+        else:
+            raise ValueError(f"Unsupported hardware type: {hardware_type}")
+
+    def send_frame(self, data):
+        self.hardware.send_frame(data['id'], data['data'])
+
+    def receive_frame(self):
+        self.hardware.receive_frame()
+
 class Tx:
-    def __init__(self,event_manager,Tx_ID) :
-        self.event_manager=event_manager
-        self.Tx_ID=Tx_ID
-        self.frame_queue=queue.Queue
-
+    def __init__(self, event_manager: EventManager, Tx_ID):
+        self.event_manager = event_manager
+        self.Tx_ID = Tx_ID
+        self.frame_queue = queue.Queue()
 
     def queue_frame(self, data):
-      self.frame_queue.put(data) 
+        self.frame_queue.put(data)
 
     def dispatch_frame(self):
         if not self.frame_queue.empty():
@@ -85,19 +116,44 @@ class Tx:
             self.transmit(frame)
 
     def transmit(self, data):
-        self.event_manager.publish("SEND_FRAME",{"id": self.Tx_ID,"data" : data})
-       # print(f"{Colors.BLUE}Transmitted : {Frame.hex(data)}{Colors.RESET}")
-
+        self.event_manager.publish("SEND_FRAME", {"id": self.Tx_ID, "data": data})
 
 class Rx:
-    def __init__(self,event_manager,Rx_ID):
-        self.event_manager=event_manager
+    def __init__(self, event_manager: EventManager, Rx_ID):
+        self.event_manager = event_manager
         self.Rx_ID = Rx_ID
         self.event_manager.subscribe("FRAME_RECEIVED", self.handle_received_frame)
 
-
     def handle_received_frame(self, frame):
         if frame['id'] == self.Rx_ID:
-           # print(f"{Colors.YELLOW}Received : {Frame.hex(frame['data'])}{Colors.RESET}")
             self.event_manager.publish("INCOMING_FRAME", frame['data'])
-#now hardware part is done we have to start with TP part now for vallidation of the received frames            
+
+class TP:
+    def __init__(self, event_manager: EventManager):
+        self.event_manager = event_manager
+        self.buffer = queue.Queue()
+        self.event_manager.subscribe("INCOMING_FRAME", self.handle_incoming_frame)
+        # Add more initializations and subscriptions as needed
+
+    def handle_incoming_frame(self, frame):
+        # Implement frame handling logic
+        pass
+
+    # Add more TP-related methods here
+def main():
+    event_manager = EventManager()
+    #hardware = HardwareWrapper(event_manager, "PCAN", channel="PCAN_USBBUS1", baud="500K", message_type="STANDARD")
+    tx = Tx(event_manager, 0x743)  # Example Tx ID
+    rx = Rx(event_manager, 0x763)  # Example Rx ID
+    tp = TP(event_manager)
+
+    def run():
+        while True:
+            event_manager.publish("RECEIVE_FRAME")
+            tx.dispatch_frame()
+            time.sleep(1)
+
+    
+
+if __name__ == "__main__":
+    main()
