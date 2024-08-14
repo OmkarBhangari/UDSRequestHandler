@@ -1,4 +1,4 @@
-from .UDSException import UDSException
+from UDSException import UDSException
 
 class Frame:
     SINGLE_FRAME: int = 0
@@ -45,9 +45,13 @@ class Frame:
             return False
         
     def extract_length(self, frame):
-        # data = frame[5:]
-        len = (((frame[0] & 0x0F) << 8) | frame[1]) - 6
-        return  len
+        frame_type = self.validate_frame(frame)
+        if frame_type == Frame.SINGLE_FRAME:
+            return frame[0] & 0x0F
+        elif frame_type == Frame.FIRST_FRAME:
+            return (frame[0] & 0x0F) << 8 | frame[1]
+        else:
+            return None
     
     @staticmethod
     def hex(msg):
