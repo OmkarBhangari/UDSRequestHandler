@@ -84,12 +84,7 @@ class PCANWrapper(CANInterface):
         result, msg, timestamp = self.pcan.Read(self.channel)
         
         if result == PCAN_ERROR_OK:
-            frame = {
-                'id': msg.ID,
-                'data': tuple(msg.DATA[:msg.LEN])
-            }
-            self.event_manager.publish("FRAME_RECEIVED", frame)
-            self.event_manager.publish("data_received", msg.DATA[:msg.LEN])
+            self.event_manager.publish("DATA_RECEIVED", msg.DATA)
         else:
             print(f"Error receiving frame: {result}")     
 
@@ -135,7 +130,7 @@ class CAN_TP:
         self.TX_ID = TX_ID
         self.RX_ID = RX_ID
         self.event_manager = event_manager
-        self.event_manager.subscribe('data_received', self.get_data)
+        self.event_manager.subscribe('DATA_RECEIVED', self.process_frame)
         self.store_data = []
         self.buffer_to_can = queue.Queue()
         self.buffer_from_uds = queue.Queue()
@@ -145,10 +140,6 @@ class CAN_TP:
         self.counter = 0
         self.block_size = 4
         self.time_between_consecutive_frames = 20
-
-    def get_data(self, frame):
-        
-        self.process_frame(frame)
 
     def send_data(self, data):
         self.event_manager.publish("SEND_FRAME", {"id": self.TX_ID, "data": data})
@@ -188,46 +179,15 @@ class CAN_TP:
                 self.send_data(self.FC_frame)
 
         except UDSException as e:
-            print(f"UDS Exception: {str(e)}")
+            print(f"UDS Exception: {e}")
             # Handle UDS exception (e.g., log it, notify user, etc.)
         except Exception as e:
-            print(f"Error processing frame: {str(e)}")
-            # Handle other exceptions
-
-            if self.frame_type == Frame.SINGLE_FRAME:
-                print("its single frame")
-                self.store_data = []
-                self.temp = frame[1:]
-                self.store_data.extend(self.temp)
-                self.route_frame()
-
-            elif self.frame_type == Frame.FIRST_FRAME:
-                print("its first frame")
-                self.bytes = Frame.extract_length(self.frame_type,frame)
-                self.no_of_frames = self.bytes // 7
-                self.counter = 0
-                self.temp = frame[2:]
-                self.store_data.extend(self.temp)
-
-            elif self.frame_type == Frame.CONSECUTIVE_FRAME:
-                print("its consecutive frame frame")
-                self.counter -= 1
-                self.no_of_frames -= 1
-                self.temp = frame[1:]
-                self.store_data.extend(self.temp)
+            print(f"Error processing frame: {e}")
             
-            if self.no_of_frames == 0:
-                self.route_frame()
-
-            if self.counter == 0:
-                self.counter = min(self.no_of_frames, self.block_size)
-                self.FC_frame = Frame.construct_flow_control(self.counter, self.time_between_consecutive_frames)
-                self.send_data(self.FC_frame)
 
     def route_frame(self):
-        self.store_data = Frame.hex(self.store_data)
-        self.store_data = tuple(self.store_data)
-        self.event_manager.publish('data_to_uds', self.store_data)
+        self.store_data = self.store_data
+        self.event_manager.publish('DATA_TO_UDS', self.store_data)
 
     def process_uds_data(self, data):
         if len(data) <= 7:
@@ -291,13 +251,6 @@ def main():
     TX_ID=0x743
     RX_ID=0x763
     can_tp = CAN_TP(TX_ID, RX_ID, channel_used, baud_rate, msg_type, event_manager)
-
-    # Subscribe to the "INCOMING_FRAME" event to handle received frames
-    def handle_incoming_frame(data):
-        print(f"Received frame data: {data}")
-        # Add validation logic here
-
-    event_manager.subscribe("INCOMING_FRAME", handle_incoming_frame)
 
     # Main loop to read from ECU
     try:
