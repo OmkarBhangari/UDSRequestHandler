@@ -6,12 +6,31 @@ from rich.table import Table
 from rich.console import Console
 from PCANBasic import *
 from pcan_constants import *
+from abc import ABC ,abstractmethod
+class CANInterface(ABC):
+    @abstractmethod
+    def initialize(self):
+        pass
+
+    @abstractmethod
+    def send_frame(self):
+        pass
+
+    @abstractmethod
+    def receive_frame(self):
+        pass
+
+    @abstractmethod
+    def cleanup(self):
+        pass
+
 class Colors:
     BLUE = "\033[94m"
     YELLOW = "\033[93m"
     RED = "\033[91m"
     GREEN = "\033[92m"
     RESET = "\033[0m"
+
 
 class EventManager:
     def __init__(self):
@@ -30,21 +49,22 @@ class EventManager:
         if event_type in self.subscribers:
             for callback in self.subscribers[event_type]:
                 callback(data)
-class PCAN:
-    def __init__(self,event_manager : EventManager , channel, baud, message_type) :
-        self.event_manager=event_manager
-        self.pcan = PCANBasic()  # Initialize the PCANBasic instance
-        self.channel = PCAN_CHANNELS[channel]  # Define the PCAN channel you are using (e.g., PCAN_USBBUS1 for the first USB channel)
-        self.baudrate = PCAN_BAUD_RATES[baud]  # Define the baud rate (e.g., PCAN_BAUD_500K for 500 kbps)
-        self.pcan_channel = self.pcan.Initialize(self.channel, self.baudrate)  # Initialize the PCAN channel
+class PCANWrapper(CANInterface):
+    def __init__(self, event_manager, channel, baud, message_type):
+        self.event_manager = event_manager
+        self.pcan = PCANBasic()
+        self.channel = PCAN_CHANNELS[channel]
+        self.baudrate = PCAN_BAUD_RATES[baud]
         self.message_type = PCAN_MESSAGE_TYPES[message_type]
-        self.event_manager.subscribe("SEND_FRAME",self.send_frame)
-        self.event_manager.subscribe("RECEIVE_FRAME",self.receive_frame)
+        self.initialize() 
 
-        # replace this with better error handling structure
-        if self.pcan_channel != PCAN_ERROR_OK:
-            print("Error initializing PCAN channel:", self.pcan_channel)
-            exit(1)  
+    def initialize(self):
+        result = self.pcan.Initialize(self.channel, self.baudrate)
+        if result != PCAN_ERROR_OK:
+            raise Exception(f"Error initializing PCAN channel: {result}")
+        self.event_manager.subscribe("SEND_FRAME", self.send_frame)
+        self.event_manager.subscribe("RECEIVE_FRAME", self.receive_frame)
+
 
     def send_frame(self, arbitration_id, data):
         frame=TPCANMsg ()
@@ -67,7 +87,10 @@ class PCAN:
             }
             self.event_manager.publish("FRAME_RECEIVED", frame)
         else:
-            print(f"Error receiving frame: {result}")               
+            print(f"Error receiving frame: {result}")     
+
+    def cleanup(self):
+        self.pcan.Uninitialize(self.channel)                  
     
 class Tx:
     def __init__(self,event_manager,Tx_ID) :
@@ -106,12 +129,12 @@ def main():
     event_manager = EventManager()
 
     # Define PCAN configuration
-    pcan_channel = "PCAN_USBBUS1"  # Change as per your setup
-    pcan_baud = "PCAN_BAUD_500K"  # Change as per your setup
-    pcan_msg_type = "PCAN_MESSAGE_EXTENDED"  # Change to "EXTENDED" if using extended IDs
+    channel_used = "PCAN_USBBUS1"  # Change as per your setup
+    baud_rate = "PCAN_BAUD_500K"  # Change as per your setup
+    msg_type = "PCAN_MESSAGE_EXTENDED"  # Change to "EXTENDED" if using extended IDs
 
     # Initialize PCAN
-    pcan = PCAN(event_manager, pcan_channel, pcan_baud, pcan_msg_type)
+    pcan = PCANWrapper(event_manager, channel_used, baud_rate, msg_type)
 
     # Initialize Tx and Rx
     tx = Tx(event_manager, Tx_ID=0x743)  # Example Tx ID, change as needed
