@@ -1,35 +1,54 @@
 import queue
 from . import Colors
-from .TP import TP 
 from rich.table import Table
 from rich.console import Console
+from .frame import Frame
 
 class Ox19:
-    DTC_REQUEST = (0x03, 0x19, 0x02, 0x09, 0x00, 0x00, 0x00, 0x00)
+    DTC_REQUEST = (0x19, 0x02, 0x09)
 
-    def __init__(self, uds):
-        self.uds = uds
+    def __init__(self, uds_instance):
         self.buffer = queue.Queue()
-
-    async def send_dtc_request(self):
-        self.uds.queue_frame(Ox19.DTC_REQUEST)
+        self.uds = uds_instance
+        self.frame = Frame()
+        
+    """ def send_request(self):
+        self.uds.queue_frame(Ox19.DTC_REQUEST) """
 
     def buffer_frame(self, frame):
         self.buffer.put(frame)
+        self.main()
+
 
     def main(self):
         if not self.buffer.empty():
-            data = self.buffer.get()
-            DTC_data = TP.extract_data(data)
-            DTC_data = DTC_data[2:]
+            self.data = self.buffer.get()
+            #DTC_data = TP.extract_data(data)
+            DTC_data = self.data[2:]
             print(f"{Colors.green}{DTC_data}{Colors.reset}")
             self.decoder(DTC_data)
 
-    def decoder(self, data) -> None:
+    def decoder(self, received_data) -> None:
+        print("decode_table")
         self.table = Table(title="Hex Values and Status Mask")
         self.table.add_column("Hex Values", justify="left")
         self.table.add_column("Status Mask", justify="left")
         self.console = Console()
+
+        # Ensure that data contains integers
+        hex_data = self.frame.hex(received_data)
+
+        # Convert hex strings to integers if necessary
+        data = []
+        for item in hex_data:
+            if isinstance(item, str):
+                if item.startswith('0x'):
+                    item = int(item, 16)  # Convert hex string with '0x' to integer
+                else:
+                    item = int(item, 16)  # Convert plain hex string to integer
+            data.append(item)  # Append each converted item
+
+        print(f"Data length: {len(data)}")  # Debug print for data length
 
         for i in range(0, len(data), 4):
             if i + 3 < len(data):
@@ -38,12 +57,20 @@ class Ox19:
                 
                 hex_value_str = f"{combined_hex_value:06X}"
                 status_mask_str = f"{status_mask:02X}"
+                print("Tableee")  # Debug print to verify decode_table call
                 self.decode_table(hex_value_str, status_mask_str)
-
-        self.console.print(self.table)
+        
+        print(self.table)  # Debug print to verify table content
+        try:
+            self.console.print(self.table)
+            self.uds.add_from_sid(self.table)
+        except Exception as e:
+            print(f"Error printing table: {e}")
+        #self.uds.add_from_sid(self.table)
 
     def hex_to_bin(self, hex_value):
         # Ensure hex_value is an integer
+        print("hex_to_bin")
         if isinstance(hex_value, str):
             hex_value = int(hex_value, 16)
         # Convert integer to binary string and remove '0b' prefix
@@ -51,6 +78,7 @@ class Ox19:
         return binary_string    
 
     def decode_table(self, hex_value_str, status_mask_str) -> None:
+        print("decode_table")
         system_specific_dtc = int(hex_value_str, 16) & 0xF00000
         system_specific_value = self.hex_to_bin(system_specific_dtc)[:2]
         

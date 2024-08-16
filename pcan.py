@@ -13,6 +13,8 @@ class PCAN:
         if self.pcan_channel != PCAN_ERROR_OK:
             print("Error initializing PCAN channel:", self.pcan_channel)
             exit(1)
+        else:
+            print("PCAN channel initialized")
 
     def send_frame(self, arbitration_id, data):
         # Define the CAN message with the specified arbitration ID and data
@@ -26,6 +28,8 @@ class PCAN:
         result = self.pcan.Write(self.channel, frame)
         if result != PCAN_ERROR_OK:
             print("Error transmitting CAN message:", result)
+        else:
+            print("Message transmitted from PCAN")
     
     def receive_frame(self) -> None:
         result, msg, timestamp = self.pcan.Read(self.channel)

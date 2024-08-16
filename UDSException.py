@@ -35,7 +35,7 @@ class UDSException(Exception):
             0x71: "Transfer aborted",
             0x72: "Incorrect block sequence counter",
             0x73: "Unsupported transfer type",
-            0x78: "Request correctly received, response pending",
+            '0x78': "Request correctly received, response pending",
             0x7E: "Sub-function not supported in active session",
             0x7F: "Service not supported in active session"
         }
