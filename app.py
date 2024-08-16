@@ -1,80 +1,43 @@
+""" from ecupath import PCAN
+from ecupath import CAN
+from ecupath import CAN_TP """
+from ecupath import UDS
+from ecupath import EventManager
 import threading
-import ttkbootstrap as ttk
-import asyncio
-from uds import UDS, Ox19, Ox10
+import time
 
-""" class GuiInterface:
-    def __init__(self, master):
-        self.master = master
-        master.title("UDS Interface")
+class App:
+    def __init__(self, tx_id, rx_id, channel, baud_rate, message_type):
+        self.event_manager = EventManager()
 
-        self.uds_wrapper = UdsWrapper(0x743, 0x763)
+        # Initialize CAN
+        #self.can = CAN(can_id, can_tp_id, pcan_device, baud_rate, message_type, self.event_manager)
 
-        self.start_session_button = ttk.Button(master, text="Start Session", command=self.run_async_function(self.start_session))
-        self.start_session_button.pack()
+        # Initialize CAN-TP
+        #self.can_tp = CAN_TP(self.can, self.event_manager)
 
-        self.send_dtc_button = ttk.Button(master, text="Send DTC Request", command=self.run_async_function(self.send_dtc_request))
-        self.send_dtc_button.pack()
+        # Initialize UDS
+        self.uds = UDS(tx_id, rx_id, channel, baud_rate, message_type, self.event_manager)
 
-        self.log = ttk.Text(master)
-        self.log.pack()
+        self.monitoring = False
 
-    async def start_session(self):
-        result = await self.uds_wrapper.execute_sid(0x10)
-        self.log.insert(ttk.END, f"Session started: {result}\n")
+    def start_monitoring(self):
+        self.monitoring = True
+        self.monitor_thread = threading.Thread(target=self.monitor)
+        self.monitor_thread.start()
 
-    async def send_dtc_request(self):
-        result = await self.uds_wrapper.execute_sid(0x19)
-        self.log.insert(ttk.END, f"DTC Request sent: {result}\n")
+    def stop_monitoring(self):
+        self.monitoring = False
+        if self.monitor_thread.is_alive():
+            self.monitor_thread.join()
 
-    def run_async_function(self, async_func):
-        def wrapper():
-            asyncio.run_coroutine_threadsafe(async_func(), asyncio_loop)
-        return wrapper """
+    def monitor(self):
+        while self.monitoring:
+            self.uds.process_request_queue()
+            self.uds.can_tp.cantp_monitor()
+            self.uds.can_tp.can.can_monitor()
+            # Sleep briefly to prevent high CPU usage
+            time.sleep(0.1)
 
-class UdsWrapper:
-    def __init__(self, tx_ID, rx_ID,channel,baud_rate,message_type):
-        self.uds = UDS(tx_ID, rx_ID,channel,baud_rate,message_type)
-        self.ox19 = Ox19(self.uds)
-        self.ox10 = Ox10(self.uds)
-        self.sid_handlers = {}
-
-    async def start_session(self):
-        """Start a diagnostic session."""
-        return await self.ox10.start_session()
-
-    async def send_dtc_request(self):
-        """Send a DTC request."""
-        return await self.ox19.send_dtc_request()
-
-    def sid_handler(self, sid, handler):
-        self.sid_handlers[sid] = handler
-
-    async def execute_sid(self, sid, *args, **kwargs):
-        if sid == 0x10:
-            return await self.start_session(*args, **kwargs)
-        elif sid == 0x19:
-            return await self.send_dtc_request(*args, **kwargs)
-        elif sid in self.sid_handlers:
-            return await self.sid_handlers[sid](*args, **kwargs)
-        else:
-            raise ValueError(f"Unsupported SID: 0x{sid:02X}")
-
-    async def close(self):
-        """Close the UDS connection."""
-        await self.uds.close()
-
-""" # Function to run the asyncio event loop
-def start_async_loop(loop):
-    asyncio.set_event_loop(loop)
-    loop.run_forever()
-
-# Create an asyncio event loop in a separate thread
-asyncio_loop = asyncio.new_event_loop()
-t = threading.Thread(target=start_async_loop, args=(asyncio_loop,), daemon=True)
-t.start()
-
-# Set up the GUI
-root = ttk.Window()
-gui = GuiInterface(root)
-root.mainloop() """
+    def get_uds(self):
+        return self.uds
