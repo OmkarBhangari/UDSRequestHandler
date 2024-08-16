@@ -1,8 +1,18 @@
+from abc import ABC, abstractmethod
 from .PCANBasic import *
 from .pcan_constants import *
 
-class PCAN:
-    def __init__(self, channel, baud, message_type) -> None:
+class HardwareInterface(ABC):
+    @abstractmethod
+    def send_frame(self, arbitration_id, data):
+        pass
+
+    @abstractmethod
+    def receive_frame(self):
+        pass
+
+class PCAN(HardwareInterface):
+    def __init__(self, channel, baud, message_type):
         self.pcan = PCANBasic()  # Initialize the PCANBasic instance
         self.channel = PCAN_CHANNELS[channel]  # Define the PCAN channel you are using (e.g., PCAN_USBBUS1 for the first USB channel)
         self.baudrate = PCAN_BAUD_RATES[baud]  # Define the baud rate (e.g., PCAN_BAUD_500K for 500 kbps)
@@ -31,6 +41,25 @@ class PCAN:
         else:
             print("Message transmitted from PCAN")
     
-    def receive_frame(self) -> None:
+    def receive_frame(self):
         result, msg, timestamp = self.pcan.Read(self.channel)
         return tuple(msg.DATA)
+    
+class Vector(HardwareInterface):
+    def __init__(self, channel, baud, message_type):
+        # Initialize Vector 
+        pass
+
+    def send_frame(self, arbitration_id, data):
+        # Implement Vector frame sending
+        pass
+
+    def receive_frame(self):
+        # Implement Vector frame receiving
+        pass
+
+def get_hardware_interface(choice, *args):
+    if choice.lower() == "pcan":
+        return PCAN(*args)
+    else:
+        return Vector(*args)
