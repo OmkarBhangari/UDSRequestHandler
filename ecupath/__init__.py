@@ -1,5 +1,5 @@
 from .uds import UDS
-from .can import CAN
+from .Can import CAN
 from .can_tp import CAN_TP
 #from ..gui import DiagnosticGUI
 """ from .Ox10 import Ox10

@@ -1,0 +1,60 @@
+from . import Colors
+from .frame import Frame
+from .event_manager import EventManager
+from .Interface import get_hardware_interface
+import queue
+
+class Tx:
+    def __init__(self, hardware_interface, tx_id, tx_buffer):
+        self.hardware_interface = hardware_interface
+        self.tx_id = tx_id
+        self.tx_buffer = tx_buffer
+
+    def transmit(self):
+        if not self.tx_buffer.empty():
+            data = self.tx_buffer.get()
+            self.hardware_interface.send_frame(self.tx_id, data)
+            print(f"{Colors.blue}Transmitted : {Frame.hex(data)}{Colors.reset}")
+
+
+class Rx:
+    def __init__(self, hardware_interface, rx_id, rx_buffer, event_manager):
+        self.hardware_interface = hardware_interface
+        self.rx_id = rx_id
+        self.rx_buffer = rx_buffer
+        self.event_manager = event_manager
+
+    def receive(self):
+        data = self.hardware_interface.receive_frame()
+
+        # TODO: Comment the following 3 lines of code later, it was written to prevent the terminal from getting populated by zero value frames
+        # Check if the frame is all zeros
+        if all(byte == 0 for byte in data):
+            return  # Ignore the frame and do not print or publish it
+
+        self.rx_buffer.put(data) # this is not being used currently 
+        print(f"{Colors.yellow}Received : {Frame.hex(data)}{Colors.reset}")
+        self.event_manager.publish('data_received', data)
+
+
+class CAN:
+    def __init__(self, tx_id, rx_id, channel, baudrate, msg_type, event_manager: EventManager):
+
+        self.event_manager = event_manager
+        self.hardware_interface = get_hardware_interface("pcan", channel, baudrate, msg_type)
+
+        self.tx_buffer = queue.Queue()
+        self.rx_buffer = queue.Queue()
+
+        self.tx = Tx(self.hardware_interface, tx_id, self.tx_buffer)
+        self.rx = Rx(self.hardware_interface, rx_id, self.rx_buffer, self.event_manager)
+
+    # adds data to the tx_buffer to send data to ecu
+    # method is called from can_tp.py
+    def transmit_data(self, data):
+        self.tx_buffer.put(data)
+
+    # this function is called from app.py for continuous monitoring
+    def can_monitor(self):
+        self.tx.transmit()
+        self.rx.receive()

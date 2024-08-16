@@ -1,4 +1,4 @@
-from .can import CAN
+from .Can import CAN
 from .event_manager import EventManager
 from .frame import Frame
 import queue
