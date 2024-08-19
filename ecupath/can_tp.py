@@ -1,11 +1,10 @@
-from .Can import CAN
+from .can import CAN
 from .event_manager import EventManager
 from .frame import Frame
 import queue
 
 class CAN_TP:
     def __init__(self, tx_id, rx_id, channel, baud_rate, message_type, event_manager: EventManager) -> None:
-        
         self.event_manager = event_manager
         self.can = CAN(tx_id, rx_id, channel, baud_rate, message_type, self.event_manager)
         self.event_manager.subscribe('data_received', self.get_data)
@@ -21,6 +20,10 @@ class CAN_TP:
         self.block_size = 4
         self.time_between_consecutive_frames = 20
 
+        # State for multi-frame transmission
+        self.remaining_data = None
+        self.sequence_number = 1
+
     def get_data(self, incoming_frame):
         self.process_frame(incoming_frame)
 
@@ -35,7 +38,7 @@ class CAN_TP:
         if all(byte == 0 for byte in incoming_frame):
             print("Ignoring frame with all zeros")
             return
-        
+
         # Validate the incoming frame and determine its type
         self.frame_type = self.frame.validate_frame(incoming_frame)
 
@@ -61,7 +64,7 @@ class CAN_TP:
             self.FC_frame = self.frame.construct_flow_control(self.counter, self.time_between_consecutive_frames)
             self.send_data(self.FC_frame)
 
-            #print(f"First frame received. Expecting {self.no_of_frames - 1} more frames.")
+            print(f"First frame received. Expecting {self.no_of_frames - 1} more frames.")
 
         elif self.frame_type == self.frame.CONSECUTIVE_FRAME:
             # Process consecutive frames
@@ -72,7 +75,7 @@ class CAN_TP:
             self.temp = list(incoming_frame[1:])  # Convert to list
             self.store_data.extend(self.temp)
 
-            #print(f"Consecutive frame received. Total frames received: {self.frames_received}/{self.no_of_frames}")
+            print(f"Consecutive frame received. Total frames received: {self.frames_received}/{self.no_of_frames}")
 
             # Check if we've received all frames
             if self.frames_received == self.no_of_frames:
@@ -84,14 +87,14 @@ class CAN_TP:
                     self.counter = min(self.no_of_frames - self.frames_received, self.block_size)
                     self.FC_frame = self.frame.construct_flow_control(self.counter, self.time_between_consecutive_frames)
                     self.send_data(self.FC_frame)
-                    #print(f"Sent Flow Control frame, expecting {self.counter} more frames")
-                """ else:
-                    print("All frames received, not sending Flow Control") """
+                    print(f"Sent Flow Control frame, expecting {self.counter} more frames")
 
-        #print(f"Frames received: {self.frames_received}/{self.no_of_frames}, Counter: {self.counter}")  # Debug print
-
-
-
+        elif self.frame_type == self.frame.FLOW_CONTROL_FRAME:
+            # Process the Flow Control frame and send consecutive frames
+            self.rec_block_size = incoming_frame[1]
+            self.time_between_consecutive_frames = incoming_frame[2]
+            print(f"Flow control frame received: block size = {self.rec_block_size}, time between frames = {self.time_between_consecutive_frames} ms")
+            self.send_consecutive_frames(self.rec_block_size)
 
     def route_frame(self):
         self.store_data = self.frame.hex(self.store_data)
@@ -117,32 +120,53 @@ class CAN_TP:
 
     def send_multi_frame(self, data):
         total_length = len(data)
-        
+
         # First Frame
         first_frame = bytearray([0x10 | (total_length >> 8), total_length & 0xFF])
         first_frame.extend(data[:6])
         first_frame_tuple = tuple(first_frame)
         self.buffer_to_can.put(first_frame_tuple)
 
-        # Consecutive Frames
-        remaining_data = data[6:]
-        sequence_number = 1
-        while remaining_data:
-            frame = bytearray([0x20 | (sequence_number & 0x0F)])
-            frame.extend(remaining_data[:7])
+        # Prepare for sending Consecutive Frames
+        self.remaining_data = data[6:]
+        self.sequence_number = 1
+
+    def send_consecutive_frames(self, received_block_size):
+        self.received_block_size = received_block_size
+        if not self.remaining_data:
+            return
+
+        for _ in range(self.received_block_size):
+            if not self.remaining_data:
+                break
+            frame = bytearray([0x20 | (self.sequence_number & 0x0F)])
+            frame.extend(self.remaining_data[:7])
+            self.remaining_data = self.remaining_data[7:]
             if len(frame) < 8:
-                frame.extend([0] * (8 - len(frame)))  # Pad with zeros if needed
+                frame.extend([0xAA] * (8 - len(frame)))  # Pad with AA if needed
             frame_tuple = tuple(frame)
             self.buffer_to_can.put(frame_tuple)
-            remaining_data = remaining_data[7:]
-            sequence_number = (sequence_number + 1) & 0x0F
+            self.sequence_number = (self.sequence_number + 1) & 0x0F
+
+        # If we are out of data but receive a Flow Control asking for more frames
+        if not self.remaining_data and self.received_block_size > 0:
+            print("No more data to send. Sending 'AA' as padding data.")
+            while self.received_block_size > 0:
+                frame = bytearray([0x20 | (self.sequence_number & 0x0F)])
+                frame.extend([0xAA] * 7)  # Send "AA" as padding
+                frame_tuple = tuple(frame)
+                self.buffer_to_can.put(frame_tuple)
+                self.sequence_number = (self.sequence_number + 1) & 0x0F
+                self.received_block_size -= 1
+
+        # Reset block size to 0 to wait for the next Flow Control
+        self.received_block_size = 0
 
     # sends data from the buffer_to_can to the buffer present in can.py
     def send_data_to_can(self):
         while not self.buffer_to_can.empty():
             self.frame_to_can = self.buffer_to_can.get()
             print("sending data to can: ", self.frame_to_can)   # debug line
-            # self.can.transmit_data(frame)
             self.send_data(self.frame_to_can)
 
     # this function is called from the uds.py
