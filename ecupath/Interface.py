@@ -43,7 +43,7 @@ class PCAN(HardwareInterface):
     
     def receive_frame(self):
         result, msg, timestamp = self.pcan.Read(self.channel)
-        return tuple(msg.DATA)
+        return tuple(msg.DATA), msg.ID
     
 class Vector(HardwareInterface):
     def __init__(self, channel, baud, message_type):

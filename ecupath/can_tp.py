@@ -108,7 +108,7 @@ class CAN_TP:
         print(data)  # debug line
         if len(data) <= 7:
             # Single Frame
-            frame = bytearray([len(data)])  # First byte indicates length
+            frame = ([len(data)])  # First byte indicates length
             frame.extend(data)
             frame.extend([0] * (8 - len(frame)))  # Pad with zeros
             frame_tuple = tuple(frame)
@@ -122,7 +122,7 @@ class CAN_TP:
         total_length = len(data)
 
         # First Frame
-        first_frame = bytearray([0x10 | (total_length >> 8), total_length & 0xFF])
+        first_frame = ([0x10 | (total_length >> 8), total_length & 0xFF])
         first_frame.extend(data[:6])
         first_frame_tuple = tuple(first_frame)
         self.buffer_to_can.put(first_frame_tuple)
@@ -139,7 +139,7 @@ class CAN_TP:
         for _ in range(self.received_block_size):
             if not self.remaining_data:
                 break
-            frame = bytearray([0x20 | (self.sequence_number & 0x0F)])
+            frame = ([0x20 | (self.sequence_number & 0x0F)])
             frame.extend(self.remaining_data[:7])
             self.remaining_data = self.remaining_data[7:]
             if len(frame) < 8:
@@ -152,7 +152,7 @@ class CAN_TP:
         if not self.remaining_data and self.received_block_size > 0:
             print("No more data to send. Sending 'AA' as padding data.")
             while self.received_block_size > 0:
-                frame = bytearray([0x20 | (self.sequence_number & 0x0F)])
+                frame = ([0x20 | (self.sequence_number & 0x0F)])
                 frame.extend([0xAA] * 7)  # Send "AA" as padding
                 frame_tuple = tuple(frame)
                 self.buffer_to_can.put(frame_tuple)

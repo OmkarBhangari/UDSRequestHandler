@@ -25,16 +25,18 @@ class Rx:
         self.event_manager = event_manager
 
     def receive(self):
-        data = self.hardware_interface.receive_frame()
+        data, id = self.hardware_interface.receive_frame()
 
         # TODO: Comment the following 3 lines of code later, it was written to prevent the terminal from getting populated by zero value frames
         # Check if the frame is all zeros
         if all(byte == 0 for byte in data):
             return  # Ignore the frame and do not print or publish it
 
-        self.rx_buffer.put(data) # this is not being used currently 
-        print(f"{Colors.yellow}Received : {Frame.hex(data)}{Colors.reset}")
-        self.event_manager.publish('data_received', data)
+        if(id == self.rx_id):
+            print(data, "______", id)   # debug line
+            self.rx_buffer.put(data) # this is not being used currently 
+            print(f"{Colors.yellow}Received : {Frame.hex(data)}{Colors.reset}")
+            self.event_manager.publish('data_received', data)
 
 
 class CAN:

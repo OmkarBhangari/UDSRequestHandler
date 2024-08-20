@@ -2,6 +2,7 @@ import queue
 from . import Colors
 from rich.table import Table
 from rich.console import Console
+from io import StringIO
 from .frame import Frame
 
 class Ox19:
@@ -12,19 +13,14 @@ class Ox19:
         self.uds = uds_instance
         self.frame = Frame()
         
-    """ def send_request(self):
-        self.uds.queue_frame(Ox19.DTC_REQUEST) """
-
     def buffer_frame(self, frame):
         self.buffer.put(frame)
         self.main()
 
-
     def main(self):
         if not self.buffer.empty():
             self.data = self.buffer.get()
-            #DTC_data = TP.extract_data(data)
-            DTC_data = self.data[2:]
+            DTC_data = self.data[3:]
             print(f"{Colors.green}{DTC_data}{Colors.reset}")
             self.decoder(DTC_data)
 
@@ -51,7 +47,7 @@ class Ox19:
         print(f"Data length: {len(data)}")  # Debug print for data length
 
         for i in range(0, len(data), 4):
-            if i + 3 < len(data):
+            if i + 3 < len(data):  # Ensure there are enough bytes for a complete set
                 combined_hex_value = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2]
                 status_mask = data[i + 3]
                 
@@ -60,20 +56,24 @@ class Ox19:
                 print("Tableee")  # Debug print to verify decode_table call
                 self.decode_table(hex_value_str, status_mask_str)
         
-        print(self.table)  # Debug print to verify table content
-        try:
+        # Capture the table output as a string
+        with StringIO() as buffer:
+            self.console = Console(file=buffer)
             self.console.print(self.table)
+            table_string = buffer.getvalue()
+
+        print(table_string)  # Print the captured table string
+
+        try:
+            # Print to console and add to uds
             self.uds.add_from_sid(self.table)
         except Exception as e:
             print(f"Error printing table: {e}")
-        #self.uds.add_from_sid(self.table)
 
     def hex_to_bin(self, hex_value):
-        # Ensure hex_value is an integer
         print("hex_to_bin")
         if isinstance(hex_value, str):
             hex_value = int(hex_value, 16)
-        # Convert integer to binary string and remove '0b' prefix
         binary_string = bin(hex_value)[2:].zfill(8)
         return binary_string    
 
