@@ -84,13 +84,18 @@ class Ox2EInputContent:
         self.data_entry.pack(fill="x", padx="8")
 
 class RequestDetailsWindow:
-    def __init__(self, parent, request_details):
+    def __init__(self, parent, uds, request_details):
         self.window = ttk.Toplevel(parent)
         self.window.title("Request Details")
         self.window.geometry("400x300")
+        self.uds = uds
 
         for key, value in request_details.items():
             ttk.Label(self.window, text=f"{key}: {value}").pack(pady=5)
+        print("geting response from udsssssssssssssssssssssssssssssssssss")
+        self.response = self.uds.get_response()
+        if self.response:
+            ttk.Label(self.window, text=f"{self.response}").pack(pady=5)
 
 class NewReqInputBox:
     SID_options = ["0x19", "0x22", "0x2E"]
@@ -228,7 +233,7 @@ class GUI:
         button.pack(fill="x", padx=8, pady=6)
 
     def open_request_details(self, request_details):
-        RequestDetailsWindow(self.window, request_details)
+        RequestDetailsWindow(self.window, self.uds, request_details)
 
     def run(self):
         tx_id = 0x743

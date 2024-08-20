@@ -19,4 +19,4 @@ class Ox22:
         if not self.buffer.empty():
             print("I'm in Ox22")
             self.data = self.buffer.get()
-            self.uds.add_from_sid(self.new_data)
+            self.uds.add_from_sid(self.data)

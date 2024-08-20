@@ -66,7 +66,8 @@ class Ox19:
 
         try:
             # Print to console and add to uds
-            self.uds.add_from_sid(self.table)
+            self.uds.add_from_sid(table_string)
+            print("Added table to uds bufferrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
         except Exception as e:
             print(f"Error printing table: {e}")
 

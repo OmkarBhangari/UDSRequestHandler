@@ -48,7 +48,7 @@ class UDS:
             self.direct_to_sid(response)
         except UDSException as e:
             print(f"UDS Error: {e}")
-            self.response_buffer.put(e)
+            #self.response_buffer.put(e)
         except Exception as e:
             print(f"Unexpected Error: {e}")
             # You might want to handle the exception differently based on your requirements
