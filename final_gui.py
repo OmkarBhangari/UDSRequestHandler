@@ -162,19 +162,25 @@ class NewReqInputBox:
         print(f'{Colors.red}{tuple_dict}{Colors.reset}')
 
         sid = int(tuple_dict[0], 16)
-       
+    
         if sid == 0x19:
             sub_function = int(tuple_dict[1], 16)
             status_masks = tuple_dict[2]
             status_byte = sum(1 << i for i, mask in enumerate(status_masks) if mask)
             result = (sid, sub_function, status_byte)
         elif sid == 0x22:
-            did = int(tuple_dict[1], 16)
-            result = (sid, did)
+            did_parts = tuple_dict[1].split()
+            did = [int(part, 16) for part in did_parts]
+            result = (sid, *did)
         elif sid == 0x2E:
-            did = int(tuple_dict[1], 16)
-            data = int(tuple_dict[2], 16) if isinstance(tuple_dict[2], str) else tuple_dict[2]
-            result = (sid, did, data)
+            did_parts = tuple_dict[1].split()
+            did = [int(part, 16) for part in did_parts]
+            if isinstance(tuple_dict[2], str):
+                data_parts = tuple_dict[2].split()
+                data = [int(part, 16) for part in data_parts]
+            else:
+                data = tuple_dict[2]
+            result = (sid, *did, *data)
         else:
             raise ValueError(f"Unsupported SID: {hex(sid)}")
 
