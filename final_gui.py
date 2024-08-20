@@ -84,7 +84,7 @@ class Ox2EInputContent:
         self.data_entry.pack(fill="x", padx="8")
 
 class RequestDetailsWindow:
-    def __init__(self, parent, uds, request_details):
+    def __init__(self, parent, uds, request_details, data):
         self.window = ttk.Toplevel(parent)
         self.window.title("Request Details")
         self.window.geometry("400x300")
@@ -93,9 +93,8 @@ class RequestDetailsWindow:
         for key, value in request_details.items():
             ttk.Label(self.window, text=f"{key}: {value}").pack(pady=5)
         print("geting response from udsssssssssssssssssssssssssssssssssss")
-        self.response = self.uds.get_response()
-        if self.response:
-            ttk.Label(self.window, text=f"{self.response}").pack(pady=5)
+        if data:
+            ttk.Label(self.window, text=f"{data}").pack(pady=5)
 
 class NewReqInputBox:
     SID_options = ["0x19", "0x22", "0x2E"]
@@ -202,6 +201,8 @@ class GUI:
         self.new_req_input_box_placeholder.pack(fill="x")
        
         self.requests_frame = None
+        self.data = []
+        self.index = 0
 
     def toggle_session(self):
         if self.active_session:
@@ -227,13 +228,23 @@ class GUI:
         button = ttk.Button(
             self.requests_frame,
             text=f"Request: {request_details['SID']}",
-            command=lambda: self.open_request_details(request_details),
+            command=lambda index=self.index: self.open_request_details(request_details, index),
             bootstyle="info"
         )
+
+        self.index += 1
         button.pack(fill="x", padx=8, pady=6)
 
-    def open_request_details(self, request_details):
-        RequestDetailsWindow(self.window, self.uds, request_details)
+    def open_request_details(self, request_details, index):
+        while True:
+            response = self.uds.get_response()
+            if response is None:
+                break
+            self.data.append(response)
+        print("-------------------------------------------------------------------------------------",index, self.data)
+        RequestDetailsWindow(self.window, self.uds, request_details, self.data[index])
+
+        
 
     def run(self):
         tx_id = 0x743
