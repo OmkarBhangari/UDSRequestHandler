@@ -40,12 +40,9 @@ class Frame:
         length = (((frame[0] & 0x0F) << 8) | frame[1]) - 6
         return length
     
-    def check_neg_response(self, response):
-        if response[1] == 0x7F:
-            nrc = response[3]
-            raise UDSException.create_exception(nrc)
-        else:
-            return self.validate_frame(response)
+    @staticmethod
+    def negative_response(response):
+        return True if response[1] == 0x7F else False
         
     @staticmethod
     def hex(msg):

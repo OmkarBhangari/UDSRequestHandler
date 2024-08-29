@@ -17,9 +17,9 @@ class UDS:
         self.can_tp = CAN_TP(tx_id, channel, baud_rate, message_type, self.event_manager)
         self.event_manager.publish('rx_id', rx_id)
         self.event_manager.subscribe('data_to_uds', self.process_response)
-        self.buffer_to_cantp = queue.Queue() # queue to put items to send to can_tp.py
-        self.sid_output_display = queue.Queue() # queue to display data of SID's
-        self.output_terminal = queue.Queue() # queue to display in the terminal
+        self._buffer_to_cantp = queue.Queue() # queue to put items to send to can_tp.py
+        self._sid_output_display = queue.Queue() # queue to display data of SID's
+        self._output_terminal = queue.Queue() # queue to display in the terminal
         self.frame = Frame()
 
         self.handlers = {
@@ -35,7 +35,7 @@ class UDS:
         self.current_request = None
         self.session_started = False
         self.request_lock = threading.Lock()
-        self.immediate_request_queue = queue.Queue()
+        self._immediate_request_queue = queue.Queue()
 
     # called from app.py and sends session control frame
     def start_session(self):
@@ -44,26 +44,26 @@ class UDS:
             self.send_request(self.START_SESSION, immediate=True)
             self.session_started = True
 
-    # called from gui to add the requests in buffer_to_cantp
+    # called from gui to add the requests in _buffer_to_cantp
     def send_request(self, data, immediate=False):
         self.received_data = data
-        self.output_terminal.put(self.received_data)
+        self._output_terminal.put(self.received_data)
         with self.request_lock:
             if immediate:
-                self.immediate_request_queue.put(self.received_data)
+                self._immediate_request_queue.put(self.received_data)
                 self.process_immediate_request()
             elif not self.session_started and self.received_data != self.START_SESSION:
                 print("Queueing request.")
-                self.buffer_to_cantp.put(self.received_data)
+                self._buffer_to_cantp.put(self.received_data)
             elif self.waiting_for_response:
                 print("Waiting for response, queueing new request")
-                self.buffer_to_cantp.put(self.received_data)
+                self._buffer_to_cantp.put(self.received_data)
             else:
                 self.prepare_and_send_request(self.received_data)
 
     def process_immediate_request(self):
-        while not self.immediate_request_queue.empty():
-            data = self.immediate_request_queue.get()
+        while not self._immediate_request_queue.empty():
+            data = self._immediate_request_queue.get()
             print(f"Sending immediate request: {data}")
             self.can_tp.receive_data_from_uds(data)
             """ if data == self.START_SESSION:
@@ -81,14 +81,14 @@ class UDS:
     def process_request_queue(self):
         with self.request_lock:
             self.process_immediate_request()
-            if not self.waiting_for_response and not self.buffer_to_cantp.empty():
-                request = self.buffer_to_cantp.get()
+            if not self.waiting_for_response and not self._buffer_to_cantp.empty():
+                request = self._buffer_to_cantp.get()
                 self.prepare_and_send_request(request)
 
     # called via pubsub method whenever we get data from can_tp
     def process_response(self, response):
         self.received_response = response
-        self.output_terminal.put(self.received_response)
+        self._output_terminal.put(self.received_response)
         try:
             print("process_response", self.received_response)
             if self.received_response[0] == '0x7F':  # Negative response
@@ -165,14 +165,14 @@ class UDS:
 
     # called from final_gui.py to display the sid data
     def sid_display(self):
-        if not self.sid_output_display.empty():
-            return self.sid_output_display.get()
+        if not self._sid_output_display.empty():
+            return self._sid_output_display.get()
         return None
     
     # called from final_gui.py to display the data into the output terminal
     def terminal_display(self):
-        if not self.output_terminal.empty():
-            return self.output_terminal.get()
+        if not self._output_terminal.empty():
+            return self._output_terminal.get()
         return None
 
     def direct_to_sid(self, response):
@@ -188,8 +188,8 @@ class UDS:
             print(f"No handler for SID {self.sid}")
 
     def process_next_request(self):
-        if not self.waiting_for_response and not self.buffer_to_cantp.empty():
-            request = self.buffer_to_cantp.get()
+        if not self.waiting_for_response and not self._buffer_to_cantp.empty():
+            request = self._buffer_to_cantp.get()
             print(f"Sending request: {request}")
             self.can_tp.receive_data_from_uds(request)
             self.waiting_for_response = True
@@ -197,13 +197,14 @@ class UDS:
             threading.Thread(target=self.response_timeout_handler).start()
         
     def added_from_sid(self, data):
-        self.sid_output_display.put(data)
+        self.event_manager.publish('response_received', data)
+        self._sid_output_display.put(data)
 
     def process_queued_requests(self):
-        while not self.buffer_to_cantp.empty():
+        while not self._buffer_to_cantp.empty():
             with self.request_lock:
                 if not self.waiting_for_response:
-                    request = self.buffer_to_cantp.get()
+                    request = self._buffer_to_cantp.get()
                     self.prepare_and_send_request(request)
                 else:
                     break  # Stop processing if waiting for a response

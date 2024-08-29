@@ -8,7 +8,7 @@ from .frame import Frame
 class Ox19:
 
     def __init__(self, uds_instance):
-        self.buffer = queue.Queue()
+        self._buffer = queue.Queue()
         self.uds = uds_instance
         self.frame = Frame()
         self.subfunction_handlers = {
@@ -30,12 +30,12 @@ class Ox19:
         }
         
     def buffer_frame(self, frame):
-        self.buffer.put(frame)
+        self._buffer.put(frame)
         self.main()
 
     def main(self):
-        if not self.buffer.empty():
-            self.data = self.buffer.get()
+        if not self._buffer.empty():
+            self.data = self._buffer.get()
             subfunction = int(self.data[1], 16)
             handler = self.subfunction_handlers.get(subfunction)
             if handler:

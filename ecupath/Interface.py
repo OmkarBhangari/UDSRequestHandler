@@ -14,10 +14,10 @@ class HardwareInterface(ABC):
 class PCAN(HardwareInterface):
     def __init__(self, channel, baud, message_type):
         self.pcan = PCANBasic()  # Initialize the PCANBasic instance
-        self.channel = PCAN_CHANNELS[channel]  # Define the PCAN channel you are using (e.g., PCAN_USBBUS1 for the first USB channel)
-        self.baudrate = PCAN_BAUD_RATES[baud]  # Define the baud rate (e.g., PCAN_BAUD_500K for 500 kbps)
-        self.pcan_channel = self.pcan.Initialize(self.channel, self.baudrate)  # Initialize the PCAN channel
-        self.message_type = PCAN_MESSAGE_TYPES[message_type]
+        self._channel = PCAN_CHANNELS[channel]  # Define the PCAN channel you are using (e.g., PCAN_USBBUS1 for the first USB channel)
+        self._baudrate = PCAN_BAUD_RATES[baud]  # Define the baud rate (e.g., PCAN_BAUD_500K for 500 kbps)
+        self.pcan_channel = self.pcan.Initialize(self._channel, self._baudrate)  # Initialize the PCAN channel
+        self._message_type = PCAN_MESSAGE_TYPES[message_type]
 
         # replace this with better error handling structure
         if self.pcan_channel != PCAN_ERROR_OK:
@@ -30,19 +30,19 @@ class PCAN(HardwareInterface):
         # Define the CAN message with the specified arbitration ID and data
         frame = TPCANMsg()
         frame.ID = arbitration_id
-        frame.MSGTYPE = self.message_type  # Standard frame
+        frame.MSGTYPE = self._message_type  # Standard frame
         frame.LEN = len(data)  # Length of the data (no of non-zero bytes)
         frame.DATA = data  # Data (padded with zeros)
 
         # Transmit the CAN message
-        result = self.pcan.Write(self.channel, frame)
+        result = self.pcan.Write(self._channel, frame)
         if result != PCAN_ERROR_OK:
             print("Error transmitting CAN message:", result)
         else:
             print("Message transmitted from PCAN")
     
     def receive_frame(self):
-        result, msg, timestamp = self.pcan.Read(self.channel)
+        result, msg, timestamp = self.pcan.Read(self._channel)
         return tuple(msg.DATA), msg.ID
     
 class Vector(HardwareInterface):

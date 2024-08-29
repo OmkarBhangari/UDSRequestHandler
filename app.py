@@ -7,8 +7,8 @@ class App:
     TESTER_PRESENT = (0x3E, 0x00)
     STOP_MONITORING = False
 
-    def __init__(self, tx_id, rx_id, channel, baud_rate, message_type):
-        self.event_manager = EventManager()
+    def __init__(self, tx_id, rx_id, channel, baud_rate, message_type, event_manager: EventManager):
+        self.event_manager = event_manager
         self.uds = UDS(tx_id, rx_id, channel, baud_rate, message_type, self.event_manager)
         self.monitoring = False
         self.sending_tester_present = False
