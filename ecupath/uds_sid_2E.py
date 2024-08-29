@@ -2,8 +2,7 @@ import queue
 from . import Colors
 from .frame import Frame
 
-class Ox22:
-    DTC_REQUEST = (0x19, 0x02, 0x09)
+class Ox2E:
 
     def __init__(self, uds_instance):
         self.buffer = queue.Queue()
@@ -17,6 +16,6 @@ class Ox22:
 
     def main(self):
         if not self.buffer.empty():
-            print("I'm in Ox22")
+            print("I'm in Ox2E")
             self.data = self.buffer.get()
-            self.uds.add_from_sid(self.data)
+            self.uds.added_from_sid(self.data)

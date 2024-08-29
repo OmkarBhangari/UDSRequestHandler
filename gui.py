@@ -68,3 +68,7 @@ if __name__ == "__main__":
     gui = DiagnosticGUI(root)
     root.protocol("WM_DELETE_WINDOW", gui.on_close)
     root.mainloop()
+
+
+
+
