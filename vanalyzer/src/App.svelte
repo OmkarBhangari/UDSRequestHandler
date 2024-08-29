@@ -22,16 +22,6 @@
 
   async function exportLog() {
     pywebview.api.exportLog($terminalStack, $requestStack, $outputStack);
-    // let terminalContent = "";
-    // for(let i=0; i<$terminalStack.length; i++) {
-    //   const type = $terminalStack[i][0]
-    //   const frame = $terminalStack[i][1]
-    //   terminalContent += type == 'transmitted' ? 'tx' : 'rx';
-    //   terminalContent += " " + frame + '\n';
-    //   console.log(terminalContent)
-    // }
-    // const filename = "Hello.txt";
-    // const result = await pywebview.api.save_file(terminalContent, filename);
   }
 </script>
 
