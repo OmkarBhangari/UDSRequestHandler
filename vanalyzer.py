@@ -4,21 +4,44 @@ from app import App
 from ecupath import EventManager, Frame
 import json
 from datetime import datetime
+import json
 
 class Api:
     START_SESSION = (0x10, 0x03)
     
     def __init__(self):
-        tx_id = 0x743
-        rx_id = 0x763
-        channel = "PCAN_USBBUS1"
-        baud_rate = "PCAN_BAUD_500K"
-        message_type = "PCAN_MESSAGE_STANDARD"
+        # Load configuration from the JSON file
+        with open('config.json', 'r') as file:
+            config = json.load(file)
+
+        # Update the variables with values from the JSON file
+        self._tx_id = config['tx_id']
+        self._rx_id = config['rx_id']
+        self._channel = config['channel']
+        self._baud_rate = config['baud_rate']
+        self._message_type = config['message_type']
+
         self.event_manager = EventManager()
-        self.app = App(tx_id, rx_id, channel, baud_rate, message_type, self.event_manager)
+        self.app = App(self._tx_id, self._rx_id, self._channel, self._baud_rate, self._message_type, self.event_manager)
         self.uds = self.app.get_uds()
         self.event_manager.subscribe('response_received', self.update_output_stack)
         self.event_manager.subscribe('terminal', self.update_terminal_output)
+
+    def update_config(self, updated_config):
+        print(updated_config)
+
+    def get_config(self):
+        # Convert the configuration data into a JSON string to pass to the front end
+        config_data = json.dumps({
+            "txId": self._tx_id,
+            "rxId": self._rx_id,
+            "channel": self._channel,
+            "baudrate": self._baud_rate,
+            "messageType": self._message_type
+        })
+        print(config_data)
+        # Pass the config data to the JavaScript init function
+        return json.dumps(config_data)
 
     def ask_directory(self):
         directory = webview.windows[0].create_file_dialog(webview.FOLDER_DIALOG)

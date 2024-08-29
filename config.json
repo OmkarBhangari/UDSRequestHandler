@@ -1,0 +1,8 @@
+{
+    "tx_id": "0x743",
+    "rx_id": "0x763",
+    "channel": "PCAN_USBBUS1",
+    "baud_rate": "PCAN_BAUD_500K",
+    "message_type": "PCAN_MESSAGE_STANDARD"
+  }
+  
