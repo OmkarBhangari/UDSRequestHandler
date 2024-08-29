@@ -12,12 +12,16 @@
   let sessionActive = false;
 
   async function toggleSession() {
-    pywebview.api.start_session();
+    if (sessionActive) {
+      pywebview.api.stop_session();
+    } else {
+      pywebview.api.start_session();
+    }
     sessionActive = !sessionActive;
   }
 
   async function exportLog() {
-    pywebview.api.exportLog($terminalStack, $requestStack, $outputStack)
+    pywebview.api.exportLog($terminalStack, $requestStack, $outputStack);
     // let terminalContent = "";
     // for(let i=0; i<$terminalStack.length; i++) {
     //   const type = $terminalStack[i][0]

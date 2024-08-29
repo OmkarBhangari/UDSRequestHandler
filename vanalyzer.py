@@ -80,6 +80,10 @@ class Api:
         self.app.start_monitoring()
         self.uds.send_request(Api.START_SESSION)
 
+    def stop_session(self):
+        print("stop session clicked")
+        self.app.stop_monitoring()
+
     def update_output_stack(self, data):
         print(data)
         json_name = json.dumps(data)  # Properly escape the string
