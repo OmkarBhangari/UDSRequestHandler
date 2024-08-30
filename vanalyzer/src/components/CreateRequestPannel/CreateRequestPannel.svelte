@@ -2,10 +2,9 @@
   // @ts-nocheck
 
   import { Label, Select, Checkbox, Input, Button } from "flowbite-svelte";
-  import { data } from "./constants"; // Assuming the data object is in a separate file
+  import { data, hasStatusMask } from "./constants"; // Assuming the data object is in a separate file
   import { requestStack } from "../../store/store";
 
-  const list = ['0x01', '0x02', '0x05', '0x07', '0x08', '0x0F', '0x11', '0x12', '0x13'];
 
   let sid;
   let formData = {};
@@ -31,7 +30,7 @@
     selectedData.forEach((field) => {
       if (field.type === "select" || field.type === "text") {
         result[field.name] = formData[field.name];
-      } else if (field.type === "checkboxes" && list.includes(formData['Sub Functions'])) {
+      } else if (field.type === "checkboxes" && hasStatusMask.includes(formData['Sub Functions'])) {
         result[field.name] = formData[field.name]; // Store true/false values directly
       }
     });
@@ -66,7 +65,7 @@
           bind:value={formData[field.name]}
         />
       </Label>
-    {:else if field.type === "checkboxes" && list.includes(formData['Sub Functions'])}
+    {:else if field.type === "checkboxes" && hasStatusMask.includes(formData['Sub Functions'])}
       <div class="grid grid-cols-[1fr,1fr] mt-4">
         {#each field.options as option}
           <Checkbox

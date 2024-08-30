@@ -167,4 +167,4 @@ if __name__ == '__main__':
     api = Api()
     app_path = os.path.abspath('vanalyzer/dist/index.html')
     window = webview.create_window('JS API example', url=app_path, js_api=api)
-    webview.start(debug=True)
+    webview.start()
