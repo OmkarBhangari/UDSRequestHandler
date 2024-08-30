@@ -1,7 +1,7 @@
 import webview
 import os
 from app import App
-from ecupath import EventManager, Frame
+from ecupath import EventManager, Frame, get_hardware_interface, Tx, Rx
 import json
 from datetime import datetime
 import json
@@ -22,13 +22,23 @@ class Api:
         self._message_type = config['message_type']
 
         self.event_manager = EventManager()
-        self.app = App(self._tx_id, self._rx_id, self._channel, self._baud_rate, self._message_type, self.event_manager)
+        self.app = App(int(self._tx_id, 16), int(self._rx_id, 16), self._channel, self._baud_rate, self._message_type, self.event_manager)
         self.uds = self.app.get_uds()
         self.event_manager.subscribe('response_received', self.update_output_stack)
         self.event_manager.subscribe('terminal', self.update_terminal_output)
 
     def update_config(self, updated_config):
         print(updated_config)
+        self.channel = updated_config['channel']
+        self.baud_rate = updated_config['baud_rate']
+        self.message_type = updated_config['message_type']
+        self.tx_id = int(updated_config['tx_id'], 16)
+        self.rx_id = int(updated_config['rx_id'], 16)
+        self.hardware_interface = get_hardware_interface("pcan", self.channel, self.baud_rate, self.message_type)
+        #self.uds.can_tp.can.update_config_details(self.tx_id, self.rx_id, self.channel, self.baud_rate, self.message_type)
+        self.rx = Rx(self.hardware_interface, self.rx_id, self.event_manager)
+        self.tx = Tx(self.hardware_interface, self.tx_id, self.event_manager)
+    
 
     def get_config(self):
         # Convert the configuration data into a JSON string to pass to the front end
