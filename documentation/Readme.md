@@ -9,6 +9,31 @@ The UDS/CAN GUI application is a powerful tool for automotive diagnostics, desig
     - Object-Oriented Programming concepts
     - Asynchronous programming
 
+Here's a more structured version of the instructions:
+
+### How to Run the Project
+
+To get the project up and running, follow these steps:
+
+1. **Install Dependencies** (First-time Setup):
+   - **Backend**: Install the `pywebview` library by running the following command:
+     ```bash
+     pip install pywebview
+     ```
+   - **Frontend**: Navigate to the `vanalyzer` folder and install the necessary dependencies by running:
+     ```bash
+     npm i
+     ```
+
+2. **Build and Launch the Project**:
+   - Return to the root of the project directory.
+   - Execute the `r.bat` script to build the frontend and launch the project:
+     ```bash
+     r.bat
+     ```
+   - The script will automatically build the frontend and start the project by running the `vanalyzer.py` file.
+
+
 ### Development Environment:
 
 - A suitable Integrated Development Environment (IDE) or text editor
