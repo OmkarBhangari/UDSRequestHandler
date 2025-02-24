@@ -87,22 +87,22 @@ class Rx:
 
 
 class CAN:
-    def __init__(self, tx_id, channel, baudrate, msg_type, event_manager: EventManager):
-
+    def __init__(self, interface, tx_id, channel, baudrate, msg_type, event_manager: EventManager):
         self.event_manager = event_manager
-        self.hardware_interface = get_hardware_interface("pcan", channel, baudrate, msg_type)
-
+        self.interface = interface
+        self.hardware_interface = get_hardware_interface(interface, channel, baudrate, msg_type)
         self._tx_buffer = queue.Queue()
         self._rx_buffer = queue.Queue()
-
         self.event_manager.subscribe('rx_id', self.get_rx_id)
-
         self.tx = Tx(self.hardware_interface, tx_id, self.event_manager)
         self.tx.call_tx_buffer(self._tx_buffer)
-        
 
-    # adds data to the tx_buffer to send data to ecu
-    # method is called from can_tp.py
+    def update_interface(self, interface, tx_id, channel, baudrate, msg_type):
+        self.interface = interface
+        self.hardware_interface = get_hardware_interface(interface, channel, baudrate, msg_type)
+        self.tx.update_config(tx_id)
+        self.rx.update_config(self.rx_id)
+
     def transmit_data(self, data):
         self._tx_buffer.put(data)
 
@@ -111,7 +111,6 @@ class CAN:
         self.rx = Rx(self.hardware_interface, self.rx_id, self.event_manager)
         self.rx.call_rx_buffer(self._rx_buffer)
 
-    # this function is called from app.py for continuous monitoring
     def can_monitor(self):
         self.tx.transmit()
         self.rx.receive()

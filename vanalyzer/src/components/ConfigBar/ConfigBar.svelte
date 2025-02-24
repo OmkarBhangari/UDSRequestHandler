@@ -5,13 +5,20 @@
   import { config } from "./constants";
   import { onMount } from "svelte";
 
+  let selectedInterface = "pcan"; // Default to PCAN
   let selectedChannel;
   let selectedBaudrate;
   let selectedMessageType;
   let txId = "";
   let rxId = "";
 
+  const interfaceOptions = [
+    { value: "pcan", name: "PCAN" },
+    { value: "vector", name: "Vector" }
+  ];
+
   function handleUpdate() {
+    console.log("Selected Interface:", selectedInterface);
     console.log("Selected Channel:", selectedChannel);
     console.log("Selected Baudrate:", selectedBaudrate);
     console.log("Selected Message Type:", selectedMessageType);
@@ -19,6 +26,7 @@
     console.log("Rx ID:", rxId);
 
     const updated_config = {
+      "interface": selectedInterface,
       "channel": selectedChannel,
       "baud_rate": selectedBaudrate,
       "message_type": selectedMessageType,
@@ -29,9 +37,9 @@
     pywebview.api.update_config(updated_config);
   }
 
-  // Initialize function to be called from the backend
   function init(configData) {
     configData = JSON.parse(configData);
+    selectedInterface = configData.interface || selectedInterface;
     selectedChannel = configData.channel || selectedChannel;
     selectedBaudrate = configData.baudrate || selectedBaudrate;
     selectedMessageType = configData.messageType || selectedMessageType;
@@ -39,21 +47,17 @@
     rxId = configData.rxId || rxId;
   }
 
-  // Polling function to check for the availability of get_config
   async function pollForConfig() {
     try {
-      // Check if get_config is available
       if (window.pywebview && window.pywebview.api) {
         const configData = await pywebview.api.get_config();
         init(JSON.parse(configData));
       } else {
-        // Retry after some time if get_config is not available
-        setTimeout(pollForConfig, 500); // Poll every 500ms
+        setTimeout(pollForConfig, 500);
       }
     } catch (error) {
       console.error("Error fetching config:", error);
-      // Optionally, you can retry here or handle the error accordingly
-      setTimeout(pollForConfig, 1000); // Retry after error
+      setTimeout(pollForConfig, 1000);
     }
   }
 
@@ -64,27 +68,38 @@
 
 <div class="flex items-end gap-8">
   <Label class="flex-1">
-    Select Channel
-    <Select class="my-2" items={config.channel} bind:value={selectedChannel} />
+    Select Interface
+    <Select class="my-2" items={interfaceOptions} bind:value={selectedInterface} />
   </Label>
 
-  <Label class="flex-1">
-    Select Baudrate
-    <Select
-      class="my-2"
-      items={config.baudrate}
-      bind:value={selectedBaudrate}
-    />
-  </Label>
+  {#if selectedInterface === "pcan"}
+    <Label class="flex-1">
+      Select Channel
+      <Select class="my-2" items={config.channel} bind:value={selectedChannel} />
+    </Label>
 
-  <Label class="flex-1">
-    Select Message Type
-    <Select
-      class="my-2"
-      items={config.messageType}
-      bind:value={selectedMessageType}
-    />
-  </Label>
+    <Label class="flex-1">
+      Select Baudrate
+      <Select class="my-2" items={config.baudrate} bind:value={selectedBaudrate} />
+    </Label>
+
+    <Label class="flex-1">
+      Select Message Type
+      <Select class="my-2" items={config.messageType} bind:value={selectedMessageType} />
+    </Label>
+  {/if}
+
+  {#if selectedInterface === "vector"}
+    <Label class="flex-1">
+      Select Channel
+      <Select class="my-2" items={config.vectorChannel} bind:value={selectedChannel} />
+    </Label>
+
+    <Label class="flex-1">
+      Select Baudrate
+      <Select class="my-2" items={config.baudrate} bind:value={selectedBaudrate} />
+    </Label>
+  {/if}
 
   <Label class="flex-1">
     Rx ID

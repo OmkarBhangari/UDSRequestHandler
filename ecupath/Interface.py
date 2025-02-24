@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from .PCANBasic import *
 from .pcan_constants import *
+import can
 
 class HardwareInterface(ABC):
     @abstractmethod
@@ -79,19 +80,18 @@ class PCAN(HardwareInterface):
     
 class Vector(HardwareInterface):
     def __init__(self, channel, baud, message_type):
-        # Initialize Vector 
-        pass
+        self.bus = can.interface.Bus(bustype='vector', channel=channel, bitrate=baud)
 
     def send_frame(self, arbitration_id, data):
-        # Implement Vector frame sending
-        pass
+        msg = can.Message(arbitration_id=arbitration_id, data=data, is_extended_id=False)
+        self.bus.send(msg)
 
     def receive_frame(self):
-        # Implement Vector frame receiving
-        pass
+        msg = self.bus.recv()
+        return tuple(msg.data), msg.arbitration_id
 
 def get_hardware_interface(choice, *args):
     if choice.lower() == "pcan":
         return PCAN(*args)
-    else:
+    elif choice.lower() == "vector":
         return Vector(*args)

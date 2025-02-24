@@ -4,55 +4,43 @@ from app import App
 from ecupath import EventManager, Frame, get_hardware_interface, Tx, Rx
 import json
 from datetime import datetime
-import json
-
-#hello vcgvdg
 
 class Api:
     START_SESSION = (0x10, 0x03)
-    
+
     def __init__(self):
-        # Load configuration from the JSON file
         with open('config.json', 'r') as file:
             config = json.load(file)
-
-        # Update the variables with values from the JSON file
+        self._interface = config['interface']
         self._tx_id = config['tx_id']
         self._rx_id = config['rx_id']
         self._channel = config['channel']
         self._baud_rate = config['baud_rate']
         self._message_type = config['message_type']
-
         self.event_manager = EventManager()
-        self.app = App(int(self._tx_id, 16), int(self._rx_id, 16), self._channel, self._baud_rate, self._message_type, self.event_manager)
+        self.app = App(self._interface, int(self._tx_id, 16), int(self._rx_id, 16), self._channel, self._baud_rate, self._message_type, self.event_manager)
         self.uds = self.app.get_uds()
         self.event_manager.subscribe('response_received', self.update_output_stack)
         self.event_manager.subscribe('terminal', self.update_terminal_output)
 
     def update_config(self, updated_config):
-        print(updated_config)
-        self.channel = updated_config['channel']
-        self.baud_rate = updated_config['baud_rate']
-        self.message_type = updated_config['message_type']
-        self.tx_id = int(updated_config['tx_id'], 16)
-        self.rx_id = int(updated_config['rx_id'], 16)
-        self.hardware_interface = get_hardware_interface("pcan", self.channel, self.baud_rate, self.message_type)
-        #self.uds.can_tp.can.update_config_details(self.tx_id, self.rx_id, self.channel, self.baud_rate, self.message_type)
-        self.rx = Rx(self.hardware_interface, self.rx_id, self.event_manager)
-        self.tx = Tx(self.hardware_interface, self.tx_id, self.event_manager)
-    
+        self._interface = updated_config['interface']
+        self._channel = updated_config['channel']
+        self._baud_rate = updated_config['baud_rate']
+        self._message_type = updated_config['message_type']
+        self._tx_id = int(updated_config['tx_id'], 16)
+        self._rx_id = int(updated_config['rx_id'], 16)
+        self.app.update_interface(self._interface, self._tx_id, self._rx_id, self._channel, self._baud_rate, self._message_type)
 
     def get_config(self):
-        # Convert the configuration data into a JSON string to pass to the front end
         config_data = json.dumps({
+            "interface": self._interface,
             "txId": self._tx_id,
             "rxId": self._rx_id,
             "channel": self._channel,
             "baudrate": self._baud_rate,
             "messageType": self._message_type
         })
-        print(config_data)
-        # Pass the config data to the JavaScript init function
         return json.dumps(config_data)
 
     def ask_directory(self):

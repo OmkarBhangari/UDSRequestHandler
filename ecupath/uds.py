@@ -10,26 +10,30 @@ import threading
 import time
 
 class UDS:
-    START_SESSION = (0x10, 0x03)  # StartDiagnosticSession frame
+    START_SESSION = (0x10, 0x03)
 
-    def __init__(self, tx_id, rx_id, channel, baud_rate, message_type, event_manager: EventManager):
+    def __init__(self, interface, tx_id, rx_id, channel, baud_rate, message_type, event_manager: EventManager):
+        self.interface = interface
+        self.tx_id = tx_id
+        self.rx_id = rx_id
+        self.channel = channel
+        self.baud_rate = baud_rate
+        self.message_type = message_type
         self.event_manager = event_manager
-        self.can_tp = CAN_TP(tx_id, channel, baud_rate, message_type, self.event_manager)
+        self.can_tp = CAN_TP(interface, tx_id, channel, baud_rate, message_type, event_manager)
         self.event_manager.publish('rx_id', rx_id)
         self.event_manager.subscribe('data_to_uds', self.process_response)
-        self._buffer_to_cantp = queue.Queue() # queue to put items to send to can_tp.py
-        self._sid_output_display = queue.Queue() # queue to display data of SID's
-        self._output_terminal = queue.Queue() # queue to display in the terminal
+        self._buffer_to_cantp = queue.Queue()
+        self._sid_output_display = queue.Queue()
+        self._output_terminal = queue.Queue()
         self.frame = Frame()
-
         self.handlers = {
             0x19: Ox19(self),
             0x22: Ox22(self),
             0x2E: Ox2E(self)
         }
-
-        self.p2_timer = 0.05  # Default P2 timer value in seconds
-        self.p2_star_timer = 5  # Default P2* timer value in seconds
+        self.p2_timer = 0.05
+        self.p2_star_timer = 5
         self.waiting_for_response = False
         self.response_pending = False
         self.current_request = None
@@ -37,14 +41,21 @@ class UDS:
         self.request_lock = threading.Lock()
         self._immediate_request_queue = queue.Queue()
 
-    # called from app.py and sends session control frame
+    def update_interface(self, interface, tx_id, rx_id, channel, baud_rate, message_type):
+        self.interface = interface
+        self.tx_id = tx_id
+        self.rx_id = rx_id
+        self.channel = channel
+        self.baud_rate = baud_rate
+        self.message_type = message_type
+        self.can_tp.update_interface(interface, tx_id, channel, baud_rate, message_type)
+
     def start_session(self):
         if not self.session_started:
             print("Starting diagnostic session")
             self.send_request(self.START_SESSION, immediate=True)
             self.session_started = True
 
-    # called from gui to add the requests in _buffer_to_cantp
     def send_request(self, data, immediate=False):
         self.received_data = data
         self._output_terminal.put(self.received_data)
@@ -66,8 +77,6 @@ class UDS:
             data = self._immediate_request_queue.get()
             print(f"Sending immediate request: {data}")
             self.can_tp.receive_data_from_uds(data)
-            """ if data == self.START_SESSION:
-                self.session_started = True """
 
     def prepare_and_send_request(self, data):
         self.current_request = data
@@ -77,7 +86,6 @@ class UDS:
         self.can_tp.receive_data_from_uds(data)
         threading.Thread(target=self.response_timeout_handler).start()
 
-    # called from app for continuous monitoring
     def process_request_queue(self):
         with self.request_lock:
             self.process_immediate_request()
@@ -85,14 +93,13 @@ class UDS:
                 request = self._buffer_to_cantp.get()
                 self.prepare_and_send_request(request)
 
-    # called via pubsub method whenever we get data from can_tp
     def process_response(self, response):
         self.received_response = response
         self._output_terminal.put(self.received_response)
         try:
             print("process_response", self.received_response)
-            if self.received_response[0] == '0x7F':  # Negative response
-                if self.received_response[2] == '0x78':  # ResponsePending
+            if self.received_response[0] == '0x7F':
+                if self.received_response[2] == '0x78':
                     print("Received ResponsePending (0x78)")
                     self.response_pending = True
                     threading.Thread(target=self.wait_for_response).start()
@@ -108,14 +115,13 @@ class UDS:
             print("handle response")
             self.waiting_for_response = False
             self.response_pending = False
-
-            if response[0] == '0x50':  # Positive response to StartDiagnosticSession
+            if response[0] == '0x50':
                 print("received session positive response")
                 self.update_timers(response)
                 print("Diagnostic session started successfully")
                 self.session_started = True
                 self.process_queued_requests()
-            elif response[0] == '0x7F':  # Negative response
+            elif response[0] == '0x7F':
                 print("Negative Response Detected:", response)
                 nrc = response[2]
                 print("NRC:", nrc)
@@ -124,16 +130,14 @@ class UDS:
                 print(UDSException.create_exception(nrc))
             else:
                 self.direct_to_sid(response)
-        
-        self.process_request_queue()  # Try to process the next request, if any
-
+                self.process_request_queue()
 
     def update_timers(self, response):
         print("UPDATE TIMERS")
         if len(response) >= 4:
-            self.p2_timer = (int(response[2], 16) << 8 | int(response[3], 16)) / 1000  # Convert ms to s
+            self.p2_timer = (int(response[2], 16) << 8 | int(response[3], 16)) / 1000
         if len(response) >= 6:
-            self.p2_star_timer = (int(response[4], 16) << 8 | int(response[5], 16)) / 1000  # Convert ms to s
+            self.p2_star_timer = (int(response[4], 16) << 8 | int(response[5], 16)) / 1000
         print(f"Updated timers - P2: {self.p2_timer}s, P2*: {self.p2_star_timer}s")
 
     def wait_for_response(self):
@@ -141,13 +145,11 @@ class UDS:
         start_time = time.time()
         while time.time() - start_time < timeout:
             if not self.response_pending:
-                return  # Response received, exit wait
+                return
             time.sleep(0.01)
         print(f"Timeout occurred while waiting for response after 0x78")
         self.waiting_for_response = False
         self.response_pending = False
-        # Process the next request if available
-        #self.process_next_request()
         self.process_request_queue()
 
     def response_timeout_handler(self):
@@ -155,7 +157,7 @@ class UDS:
         start_time = time.time()
         while time.time() - start_time < timeout:
             if not self.waiting_for_response or self.response_pending:
-                return  # Response received or pending, exit timeout handler
+                return
             time.sleep(0.01)
         if self.waiting_for_response and not self.response_pending:
             print(f"Timeout occurred while waiting for response to {self.current_request}")
@@ -163,17 +165,6 @@ class UDS:
             if self.current_request == self.START_SESSION:
                 self.session_started = False
 
-    # called from final_gui.py to display the sid data
-    def sid_display(self):
-        if not self._sid_output_display.empty():
-            return self._sid_output_display.get()
-        return None
-    
-    # called from final_gui.py to display the data into the output terminal
-    def terminal_display(self):
-        if not self._output_terminal.empty():
-            return self._output_terminal.get()
-        return None
 
     def direct_to_sid(self, response):
         self.Frame_response = response
