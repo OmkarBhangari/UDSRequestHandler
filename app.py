@@ -27,7 +27,7 @@ class App:
         self.channel = channel
         self.baud_rate = baud_rate
         self.message_type = message_type
-        self.uds.update_interface(interface, tx_id, rx_id, channel, 500000, message_type)
+        self.uds.update_interface(interface, tx_id, rx_id, channel, baud_rate, message_type)  #500k
 
     def start_monitoring(self):
         self.monitoring = True

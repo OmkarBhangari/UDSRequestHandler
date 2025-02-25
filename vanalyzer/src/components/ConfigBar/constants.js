@@ -18,12 +18,11 @@ export const config = {
     { value: "PCAN_USBBUS16", name: "PCAN_USBBUS16" }
   ],
   vectorChannel: [
-    { value: 0, name: "Channel 0" },
-    { value: 1, name: "Channel 1" },
-    { value: 2, name: "Channel 2" },
-    { value: 3, name: "Channel 3" },
-    { value: 4, name: "Channel 4" },
-    { value: 5, name: "Channel 5" }
+    { value: 0, name: "CAN 1" },
+    { value: 1, name: "CAN 2" }
+  ],
+  vectorBaudrate: [
+    { value: 500000, name: "500k" },
   ],
   baudrate: [
     { value: "PCAN_BAUD_1M", name: "PCAN_BAUD_1M" },

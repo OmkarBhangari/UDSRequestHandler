@@ -97,7 +97,7 @@
 
     <Label class="flex-1">
       Select Baudrate
-      <Select class="my-2" items={config.baudrate} bind:value={selectedBaudrate} />
+      <Select class="my-2" items={config.vectorBaudrate} bind:value={selectedBaudrate} />
     </Label>
   {/if}
 
