@@ -32,12 +32,18 @@ class Tx:
         if not self._tx_buffer.empty():
             data = self._tx_buffer.get()
             print(self.tx_id, "txxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+            print(f"The hardware interface is: {self.hardware_interface.__class__.__name__}")
             self.hardware_interface.send_frame(self.tx_id, data)
+            """if self.interface.__class__.__name__ == 'Vector':
+                self.interface.send_vframe(self.tx_id, data)
+            elif self.interface.__class__.__name__ == 'PCAN':
+                self.interface.send_frame(self.tx_id, data)"""
             print(f"{Colors.blue}Transmitted : {Frame.hex(data)}{Colors.reset}")
             self.event_manager.publish('terminal', ['transmitted', data])
 
-    def update_config(self, tx_id):
+    def update_config(self, hardware_interface, tx_id):
         # Update the current instance configuration
+        self.hardware_interface = hardware_interface
         self.tx_id = tx_id
         print(f"Tx instance updated with new tx_id: {tx_id}")
 
@@ -80,8 +86,9 @@ class Rx:
             self.event_manager.publish('data_received', data)
             self.event_manager.publish('terminal', ['received', data])
 
-    def update_config(self, rx_id):
+    def update_config(self, hardware_interface, rx_id):
         # Update the current instance configuration
+        self.hardware_interface = hardware_interface
         self.rx_id = rx_id
         print(f"Rx instance updated with new rx_id: {rx_id}")
 
@@ -89,8 +96,9 @@ class Rx:
 class CAN:
     def __init__(self, interface, tx_id, channel, baudrate, msg_type, event_manager: EventManager):
         self.event_manager = event_manager
-        self.interface = interface
+        #self.interface = interface
         self.hardware_interface = get_hardware_interface(interface, channel, baudrate, msg_type)
+        print(f"The hardware interface is: {self.hardware_interface.__class__.__name__}")
         self._tx_buffer = queue.Queue()
         self._rx_buffer = queue.Queue()
         self.event_manager.subscribe('rx_id', self.get_rx_id)
@@ -98,10 +106,13 @@ class CAN:
         self.tx.call_tx_buffer(self._tx_buffer)
 
     def update_interface(self, interface, tx_id, rx_id, channel, baudrate, msg_type):
-        self.interface = interface
+        #self.interface = interface
         self.hardware_interface = get_hardware_interface(interface, channel, baudrate, msg_type)
-        self.tx.update_config(tx_id)
-        self.rx.update_config(rx_id)
+        print(f"The hardware interface is: {self.hardware_interface.__class__.__name__}")
+        #self.tx.update_config(tx_id)
+        #self.rx.update_config(rx_id)
+        self.tx.update_config(self.hardware_interface, tx_id)
+        self.rx.update_config(self.hardware_interface, rx_id)
 
     def transmit_data(self, data):
         self._tx_buffer.put(data)

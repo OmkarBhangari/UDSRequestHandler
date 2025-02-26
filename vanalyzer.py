@@ -100,6 +100,7 @@ class Api:
 
     def start_session(self):
         print("Start Session Clicked")
+        self.app.update_interface(self._interface, self._tx_id, self._rx_id, self._channel, self._baud_rate, self._message_type)
         self.app.start_monitoring()
         self.uds.send_request(Api.START_SESSION)
 
