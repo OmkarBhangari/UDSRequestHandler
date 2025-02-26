@@ -48,7 +48,7 @@ class UDS:
         self.channel = channel
         self.baud_rate = baud_rate
         self.message_type = message_type
-        self.can_tp.update_interface(interface, tx_id, channel, baud_rate, message_type)
+        self.can_tp.update_interface(interface, tx_id, rx_id, channel, baud_rate, message_type)
 
     def start_session(self):
         if not self.session_started:

@@ -97,11 +97,11 @@ class CAN:
         self.tx = Tx(self.hardware_interface, tx_id, self.event_manager)
         self.tx.call_tx_buffer(self._tx_buffer)
 
-    def update_interface(self, interface, tx_id, channel, baudrate, msg_type):
+    def update_interface(self, interface, tx_id, rx_id, channel, baudrate, msg_type):
         self.interface = interface
         self.hardware_interface = get_hardware_interface(interface, channel, baudrate, msg_type)
         self.tx.update_config(tx_id)
-        self.rx.update_config(self.rx_id)
+        self.rx.update_config(rx_id)
 
     def transmit_data(self, data):
         self._tx_buffer.put(data)

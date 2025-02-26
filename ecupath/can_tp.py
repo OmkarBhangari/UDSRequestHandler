@@ -24,9 +24,9 @@ class CAN_TP:
         self.sequence_number = 1
         self.transmission_lock = threading.Lock()
 
-    def update_interface(self, interface, tx_id, channel, baud_rate, message_type):
+    def update_interface(self, interface, tx_id, rx_id, channel, baud_rate, message_type):
         self.interface = interface
-        self.can.update_interface(interface, tx_id, channel, baud_rate, message_type)
+        self.can.update_interface(interface, tx_id, rx_id, channel, baud_rate, message_type)
 
     def get_data(self, incoming_frame):
         self.process_frame(incoming_frame)

@@ -1,8 +1,8 @@
 {
-  "interface": "pcan",
-  "tx_id": "0x743",
-  "rx_id": "0x763",
-  "channel": "PCAN_USBBUS1",
-  "baud_rate": "PCAN_BAUD_500K",
-  "message_type": "PCAN_MESSAGE_STANDARD"
+  "interface": "vector",
+  "tx_id": "0x123",
+  "rx_id": "0x456",
+  "channel": "0",
+  "baud_rate": "500000",
+  "message_type": "standard"
 }
