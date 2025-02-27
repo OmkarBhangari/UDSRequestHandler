@@ -28,6 +28,11 @@ class CAN_TP:
         self.interface = interface
         self.can.update_interface(interface, tx_id, rx_id, channel, baud_rate, message_type)
 
+    def stop_interface(self):
+        # Add logic to stop the CAN interface properly
+        print("Stopping CAN interface")
+        self.can = None
+        
     def get_data(self, incoming_frame):
         self.process_frame(incoming_frame)
 

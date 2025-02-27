@@ -21,13 +21,18 @@ class App:
         self.tester_present_lock = threading.Lock()
 
     def update_interface(self, interface, tx_id, rx_id, channel, baud_rate, message_type):
+        self.stop_interface()  # Stop the current interface before updating
         self.interface = interface
         self.tx_id = tx_id
         self.rx_id = rx_id
         self.channel = channel
         self.baud_rate = baud_rate
         self.message_type = message_type
-        self.uds.update_interface(interface, tx_id, rx_id, channel, baud_rate, message_type)  #500k
+        self.uds.update_interface(interface, tx_id, rx_id, channel, baud_rate, message_type)
+
+    def stop_interface(self):
+        if self.monitoring:
+            self.stop_monitoring()
 
     def start_monitoring(self):
         self.monitoring = True

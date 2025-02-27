@@ -50,6 +50,11 @@ class UDS:
         self.message_type = message_type
         self.can_tp.update_interface(interface, tx_id, rx_id, channel, baud_rate, message_type)
 
+    def stop_session(self):
+        print("Stopping diagnostic session")
+        self.session_started = False
+        # Add any additional cleanup logic for the UDS session here
+        
     def start_session(self):
         if not self.session_started:
             print("Starting diagnostic session")
