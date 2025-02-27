@@ -92,6 +92,10 @@ class Vector(HardwareInterface):
 
 def get_hardware_interface(choice, *args):
     if choice.lower() == "pcan":
-        return PCAN(*args)
+        if PCAN.current_instance:
+            PCAN.current_instance.update_config(*args)
+            return PCAN.current_instance
+        else:
+            return PCAN(*args)
     elif choice.lower() == "vector":
         return Vector(*args)
