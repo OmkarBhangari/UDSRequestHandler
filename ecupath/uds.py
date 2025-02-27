@@ -135,7 +135,7 @@ class UDS:
                 print(UDSException.create_exception(nrc))
             else:
                 self.direct_to_sid(response)
-                self.process_request_queue()
+        self.process_request_queue()
 
     def update_timers(self, response):
         print("UPDATE TIMERS")
