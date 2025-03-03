@@ -40,4 +40,20 @@ export const data = [
       { name: 'Low Byte', type: 'text' },
     ],
   },
+  {
+    request: '0x31',
+    fields: [
+      {
+        name: 'Sub Functions',
+        type: 'select',
+        options: ['0x01', '0x02', '0x03'], 
+      },
+      {
+        name: 'High Byte', type: 'text',  
+      },
+      {
+        name: 'Low Byte', type: 'text',
+      },
+    ],
+  },
 ];
