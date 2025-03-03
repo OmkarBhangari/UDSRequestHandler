@@ -5,12 +5,12 @@
   import { config } from "./constants";
   import { onMount } from "svelte";
 
-  let selectedInterface = "pcan"; // Default to PCAN
-  let selectedChannel;
-  let selectedBaudrate;
-  let selectedMessageType;
-  let txId = "";
-  let rxId = "";
+  let selectedInterface = ""; // Default to empty
+  let selectedChannel = "";   // Default to empty
+  let selectedBaudrate = "";  // Default to empty
+  let selectedMessageType = "";  // Default to empty
+  let txId = ""; // Default Tx ID
+  let rxId = ""; // Default Rx ID
 
   const interfaceOptions = [
     { value: "pcan", name: "PCAN" },
@@ -39,10 +39,6 @@
 
   function init(configData) {
     configData = JSON.parse(configData);
-    selectedInterface = configData.interface || selectedInterface;
-    selectedChannel = configData.channel || selectedChannel;
-    selectedBaudrate = configData.baudrate || selectedBaudrate;
-    selectedMessageType = configData.messageType || selectedMessageType;
     txId = configData.txId || txId;
     rxId = configData.rxId || rxId;
   }

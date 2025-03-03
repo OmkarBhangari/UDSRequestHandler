@@ -11,17 +11,15 @@ class Api:
     def __init__(self):
         with open('config.json', 'r') as file:
             config = json.load(file)
-        self._interface = config['interface']
         self._tx_id = config['tx_id']
         self._rx_id = config['rx_id']
-        self._channel = config['channel']
-        self._baud_rate = config['baud_rate']
-        self._message_type = config['message_type']
+        self._interface = ""  # Initialize as empty string
+        self._channel = ""    # Initialize as empty string
+        self._baud_rate = ""  # Initialize as empty string
+        self._message_type = ""  # Initialize as empty string
         self.event_manager = EventManager()
-        self.app = App(self._interface, int(self._tx_id, 16), int(self._rx_id, 16), self._channel, self._baud_rate, self._message_type, self.event_manager)
-        self.uds = self.app.get_uds()
-        self.event_manager.subscribe('response_received', self.update_output_stack)
-        self.event_manager.subscribe('terminal', self.update_terminal_output)
+        self.app = None  # Initialize app as None
+        self.uds = None  # Initialize uds as None
 
     def update_config(self, updated_config):
         self._interface = updated_config['interface']
@@ -30,7 +28,14 @@ class Api:
         self._message_type = updated_config['message_type']
         self._tx_id = int(updated_config['tx_id'], 16)
         self._rx_id = int(updated_config['rx_id'], 16)
-        self.app.update_interface(self._interface, self._tx_id, self._rx_id, self._channel, self._baud_rate, self._message_type)
+        self.initialize_interface()  # Call initialization function
+
+    def initialize_interface(self):
+        print(f"Initializing interface: {self._interface}")
+        self.app = App(self._interface, self._tx_id, self._rx_id, self._channel, self._baud_rate, self._message_type, self.event_manager)
+        self.uds = self.app.get_uds()
+        self.event_manager.subscribe('response_received', self.update_output_stack)
+        self.event_manager.subscribe('terminal', self.update_terminal_output)
 
     def get_config(self):
         config_data = json.dumps({
