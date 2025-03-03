@@ -157,7 +157,26 @@ class Api:
             low_byte = int(request_data['Low Byte'])
 
             request.extend([high_byte, low_byte])
-
+        
+        elif sid == 0x27:
+             sub_function = int(request_data.get('Sub Function', '0x33'), 16)  # Default to 0x33
+             if sub_function not in [0x31, 0x33, 0x61]:
+                 raise ValueError(f"Unsupported Security Access subfunction: {hex(sub_function)}")
+             request.append(sub_function)
+             # Key sending is handled automatically by Ox27 after seed response
+        
+        # elif sid == 0x27:
+        #     try:
+        #         sub_function = int(request_data['Sub Function'], 16)
+        #         print(f"Sub Function from GUI: {hex(sub_function)}")
+        #         if sub_function not in [0x31, 0x33, 0x61]:
+        #             raise ValueError(f"Unsupported Security Access subfunction: {hex(sub_function)}. Must be 0x31, 0x33, or 0x61")
+        #         request.append(sub_function)
+        #     except KeyError:
+        #         raise ValueError("Sub Function is required for Security Access (SID 0x27)")
+        #     except ValueError as e:
+        #         raise ValueError(f"Invalid Sub Function: {str(e)}")
+        
         else:
             raise ValueError("Unsupported SID")
 

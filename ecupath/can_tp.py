@@ -45,6 +45,7 @@ class CAN_TP:
 
         # Validate the incoming frame and determine its type
         self.frame_type = self.frame.validate_frame(incoming_frame)
+        print(f"Frame type: {self.frame_type}, Frame: {[hex(x) for x in incoming_frame]}")
 
         if self.frame_type == self.frame.SINGLE_FRAME:
             # If the frame is a single frame, route it directly
@@ -66,6 +67,7 @@ class CAN_TP:
 
             # Send Flow Control Frame after receiving the First Frame
             self.FC_frame = self.frame.construct_flow_control(self.counter, self.time_between_consecutive_frames)
+            #self.FC_frame = self.frame.construct_flow_control(0,0)
             self.send_data(self.FC_frame)
 
             print(f"First frame received. Expecting {self.no_of_frames} more frames.")

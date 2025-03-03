@@ -39,14 +39,18 @@ class App:
                     self.uds.process_request_queue()
                     self.uds.can_tp.cantp_monitor()
                     self.uds.can_tp.can.can_monitor()
-            time.sleep(0.01)
+            #time.sleep(0.01)
+            time.sleep(0.001)
 
     def send_tester_present(self):
         while self.monitoring and not self.STOP_MONITORING:
+
             with self.tester_present_lock:
                 self.sending_tester_present = True
+
                 self.uds.send_request(App.TESTER_PRESENT, immediate=True)  # Sending Tester Frame
                 self.sending_tester_present = False
+            #time.sleep(4)
             time.sleep(4)
 
     def get_uds(self):
