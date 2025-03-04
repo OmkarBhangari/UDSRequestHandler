@@ -54,6 +54,7 @@ export const data = [
       {
         name: 'Low Byte', type: 'text',
       },
+      { name: 'Option Data', type: 'text' },
     ],
   },
 ];

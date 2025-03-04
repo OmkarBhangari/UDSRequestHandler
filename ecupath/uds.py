@@ -4,6 +4,7 @@ from .UDSException import UDSException
 from .frame import Frame
 from .uds_sid_19 import Ox19
 from .uds_sid_22 import Ox22
+from .uds_sid_31 import Ox31
 from .uds_sid_2E import Ox2E
 import queue
 import threading
@@ -30,7 +31,8 @@ class UDS:
         self.handlers = {
             0x19: Ox19(self),
             0x22: Ox22(self),
-            0x2E: Ox2E(self)
+            0x2E: Ox2E(self),
+            0x31: Ox31(self)
         }
         self.p2_timer = 0.05
         self.p2_star_timer = 5

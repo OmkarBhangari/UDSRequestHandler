@@ -154,6 +154,14 @@ class Api:
 
             request.extend([high_byte, low_byte])
 
+        elif sid == 0x31:
+            # Process High Byte and Low Byte
+            sub_function = int(request_data['Sub Functions'], 16)
+            high_byte = int(request_data['High Byte'])
+            low_byte = int(request_data['Low Byte'])
+           # data = int(request_data['Option Data'])
+            request.extend([sub_function,high_byte,low_byte])
+
         else:
             raise ValueError("Unsupported SID")
 
