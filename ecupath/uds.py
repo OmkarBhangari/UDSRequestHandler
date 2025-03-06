@@ -6,6 +6,7 @@ from .uds_sid_19 import Ox19
 from .uds_sid_22 import Ox22
 from .uds_sid_31 import Ox31
 from .uds_sid_2E import Ox2E
+from .uds_sid_27 import Ox27
 import queue
 import threading
 import time
@@ -32,7 +33,8 @@ class UDS:
             0x19: Ox19(self),
             0x22: Ox22(self),
             0x2E: Ox2E(self),
-            0x31: Ox31(self)
+            0x31: Ox31(self),
+            0x27: Ox27(self)
         }
         self.p2_timer = 0.05
         self.p2_star_timer = 5
@@ -99,6 +101,10 @@ class UDS:
             if not self.waiting_for_response and not self._buffer_to_cantp.empty():
                 request = self._buffer_to_cantp.get()
                 self.prepare_and_send_request(request)
+                
+    def send_immediate_request(self,data): 
+        self._immediate_request_queue.put(data)
+        self.process_immediate_request()
 
     def process_response(self, response):
         self.received_response = response

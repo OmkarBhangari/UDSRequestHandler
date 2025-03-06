@@ -57,4 +57,14 @@ export const data = [
       { name: 'Option Data', type: 'text' },
     ],
   },
+  {
+    request: '0x27',
+    fields: [
+      {
+        name: 'Sub Functions',
+        type: 'select',
+        options: ['0x33'], 
+      },
+    ],
+  },
 ];

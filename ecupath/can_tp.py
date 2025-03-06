@@ -19,7 +19,7 @@ class CAN_TP:
         self.frames_received = 0
         self.counter = 0
         self.block_size = 4
-        self.time_between_consecutive_frames = 20
+        self.time_between_consecutive_frames = 10
         self.remaining_data = None
         self.sequence_number = 1
         self.transmission_lock = threading.Lock()
@@ -114,27 +114,42 @@ class CAN_TP:
         self.received_block_size = received_block_size
         if not self.remaining_data:
             return
-        for _ in range(self.received_block_size):
-            if not self.remaining_data:
-                break
-            frame = ([0x20 | (self.sequence_number & 0x0F)])
-            frame.extend(self.remaining_data[:7])
-            self.remaining_data = self.remaining_data[7:]
-            if len(frame) < 8:
-                frame.extend([0xAA] * (8 - len(frame)))
-            frame_tuple = tuple(frame)
-            self._buffer_to_can.put(frame_tuple)
-            self.sequence_number = (self.sequence_number + 1) & 0x0F
-        if not self.remaining_data and self.received_block_size > 0:
-            print("No more data to send. Sending 'AA' as padding data.")
-            while self.received_block_size > 0:
+    
+        if self.received_block_size == 0:
+        # Unlimited block size, send all remaining data
+            while self.remaining_data:
                 frame = ([0x20 | (self.sequence_number & 0x0F)])
-                frame.extend([0xAA] * 7)
+                frame.extend(self.remaining_data[:7])
+                self.remaining_data = self.remaining_data[7:]
+                if len(frame) < 8:
+                    frame.extend([0xAA] * (8 - len(frame)))
                 frame_tuple = tuple(frame)
                 self._buffer_to_can.put(frame_tuple)
                 self.sequence_number = (self.sequence_number + 1) & 0x0F
-                self.received_block_size -= 1
+        else:
+        # Limited block size, send up to the block size
+            for _ in range(self.received_block_size):
+                if not self.remaining_data:
+                    break
+                frame = ([0x20 | (self.sequence_number & 0x0F)])
+                frame.extend(self.remaining_data[:7])
+                self.remaining_data = self.remaining_data[7:]
+                if len(frame) < 8:
+                    frame.extend([0xAA] * (8 - len(frame)))
+                frame_tuple = tuple(frame)
+                self._buffer_to_can.put(frame_tuple)
+                self.sequence_number = (self.sequence_number + 1) & 0x0F
+            if not self.remaining_data and self.received_block_size > 0:
+                print("No more data to send. Sending 'AA' as padding data.")
+                while self.received_block_size > 0:
+                    frame = ([0x20 | (self.sequence_number & 0x0F)])
+                    frame.extend([0xAA] * 7)
+                    frame_tuple = tuple(frame)
+                    self._buffer_to_can.put(frame_tuple)
+                    self.sequence_number = (self.sequence_number + 1) & 0x0F
+                    self.received_block_size -= 1
         self.received_block_size = 0
+        #self.send_data_to_can()
 
     def send_data_to_can(self):
         while not self._buffer_to_can.empty():

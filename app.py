@@ -19,6 +19,7 @@ class App:
         self.monitoring = False
         self.sending_tester_present = False
         self.tester_present_lock = threading.Lock()
+        self.tester_present_timer = None
 
     def update_interface(self, interface, tx_id, rx_id, channel, baud_rate, message_type):
         self.stop_interface()  # Stop the current interface before updating
@@ -41,16 +42,15 @@ class App:
         time.sleep(0.01)
         self.monitor_thread = threading.Thread(target=self.monitor)
         self.monitor_thread.start()
-        self.tester_present_thread = threading.Thread(target=self.send_tester_present)
-        self.tester_present_thread.start()
+        self.schedule_tester_present()
 
     def stop_monitoring(self):
         self.STOP_MONITORING = True
         self.monitoring = False
         if self.monitor_thread.is_alive():
             self.monitor_thread.join()
-        if self.tester_present_thread.is_alive():
-            self.tester_present_thread.join()
+        if self.tester_present_timer:
+            self.tester_present_timer.cancel()
 
     def monitor(self):
         while self.monitoring and not self.STOP_MONITORING:
@@ -61,13 +61,17 @@ class App:
                     self.uds.can_tp.can.can_monitor()
             time.sleep(0.01)
 
+    def schedule_tester_present(self):
+        if self.monitoring and not self.STOP_MONITORING:
+            self.tester_present_timer = threading.Timer(4, self.send_tester_present)
+            self.tester_present_timer.start()
+
     def send_tester_present(self):
-        while self.monitoring and not self.STOP_MONITORING:
-            with self.tester_present_lock:
-                self.sending_tester_present = True
-                self.uds.send_request(App.TESTER_PRESENT, immediate=True)
-                self.sending_tester_present = False
-            time.sleep(4)
+        with self.tester_present_lock:
+            self.sending_tester_present = True
+            self.uds.send_request(App.TESTER_PRESENT, immediate=True)
+            self.sending_tester_present = False
+        self.schedule_tester_present()
 
     def get_uds(self):
         return self.uds
